@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Trophy, Rocket, Check, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';

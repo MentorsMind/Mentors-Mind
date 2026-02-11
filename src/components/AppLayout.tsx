@@ -1,4 +1,3 @@
-import React from 'react';
 import { Sidebar, BottomNav } from './Navigation';
 
 interface AppLayoutProps {

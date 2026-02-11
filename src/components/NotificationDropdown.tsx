@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Bell, Check, Info, MessageSquare, Calendar } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Bell, Info, MessageSquare, Calendar } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 

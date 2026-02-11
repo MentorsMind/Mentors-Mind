@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
 
@@ -128,7 +128,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const markAsRead = (threadId: string) => {
+  const markAsRead = (_threadId: string) => {
       // Logic to clear unread count
   };
 

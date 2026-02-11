@@ -24,7 +24,7 @@ import conceptIllustration from '/img/concept-illustration.png';
 export function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { mentors } = useMentors();
+  const mentors = useMentors();
   const allMentors = mentors || [];
   
   const [mentorsVisible, setMentorsVisible] = useState(false);
@@ -243,7 +243,7 @@ export function LandingPage() {
                   </div>
                   {/* Scroll Indicator */}
                   <div className="flex justify-center gap-2 mt-6">
-                      {displayMentors.map((_, index) => (
+                      {Array.from({ length: displayMentors.length }).map((_, index) => (
                           <div key={index} className="w-2 h-2 rounded-full bg-emerald-500/30"></div>
                       ))}
                   </div>

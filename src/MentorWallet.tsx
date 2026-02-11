@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Wallet, 
   TrendingUp, 
@@ -29,7 +29,7 @@ export function MentorWallet() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Redirect if not a mentor
-  React.useEffect(() => {
+  useEffect(() => {
     if (user?.role !== 'mentor') {
       navigate('/mentor-dashboard');
     }

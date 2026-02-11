@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, User, Mail, Phone, Calendar, Clock, FileText, DollarSign, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import type { ConsultationBooking } from '../data';
 import { useNotifications } from '../contexts/NotificationContext';

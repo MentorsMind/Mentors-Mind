@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { 
   Video, 
   MessageSquare, 
@@ -38,8 +38,8 @@ export function MentorDashboard() {
         image: p.authorImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.author}`
       }))
   };
-  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [editModalTab, setEditModalTab] = React.useState<'details' | 'expertise'>('details');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editModalTab, setEditModalTab] = useState<'details' | 'expertise'>('details');
   
   const firstName = user?.name ? user.name.split(' ')[0] : 'Mentor';
   const userImage = user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=Mentor";

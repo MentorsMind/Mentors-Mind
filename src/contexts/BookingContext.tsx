@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
 import { useNotifications } from './NotificationContext';
@@ -87,7 +87,6 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     if (sessionToUpdate && user) {
         // Notify the OTHER party
         const recipientId = user.id === sessionToUpdate.mentorId ? sessionToUpdate.learnerId : sessionToUpdate.mentorId;
-        const recipientName = user.id === sessionToUpdate.mentorId ? sessionToUpdate.learnerName : sessionToUpdate.mentorName;
         const senderName = user.name;
         const dashboardLink = user.id === sessionToUpdate.mentorId ? `/learner-dashboard` : `/mentor-dashboard`;
 

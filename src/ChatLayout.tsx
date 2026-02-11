@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMessages } from './contexts/MessageContext';
 import { useAuth } from './contexts/AuthContext';
 import { Send, MoreVertical, Phone, Video, Search, ChevronLeft } from 'lucide-react';

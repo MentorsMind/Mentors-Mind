@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, MessageSquare, Loader2, CheckCircle } from 'lucide-react';
 import { useBooking } from '../contexts/BookingContext';
 

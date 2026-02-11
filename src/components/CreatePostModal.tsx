@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, MessageCircle, Tag, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, MessageCircle, Loader2 } from 'lucide-react';
 import { useForum } from '../contexts/ForumContext';
 
 interface CreatePostModalProps {

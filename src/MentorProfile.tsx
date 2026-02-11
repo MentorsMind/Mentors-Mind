@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ChevronLeft, 
   Share, 
   Check, 
   PlayCircle, 
-  MessageCircle, 
-  Star, 
-  GraduationCap 
+  Star
 } from 'lucide-react';
 import { useMentors } from './hooks/useData';
 import { AppLayout } from './components/AppLayout';
@@ -263,7 +261,7 @@ export function MentorProfile() {
                 <div className="px-4 md:px-0">
                     <h3 className="text-base font-bold mb-4 text-gray-900 dark:text-white">Expertise</h3>
                     <div className="flex flex-wrap gap-2">
-                        {mentor.tags.map((tag) => (
+                        {mentor.tags.map((tag: string) => (
                         <span key={tag} className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
                             {tag}
                         </span>
@@ -336,7 +334,7 @@ export function MentorProfile() {
                     <div className="px-4 md:px-0">
                         <h3 className="text-base font-bold mb-4 text-gray-900 dark:text-white">Experience</h3>
                         <div className="relative pl-2 space-y-8 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-200 dark:before:bg-white/10">
-                            {mentor.experience.map((exp) => (
+                            {mentor.experience.map((exp: any) => (
                                 <div key={exp.id} className="relative pl-10">
                                 <div className="absolute left-0 top-1 w-10 h-10 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 flex items-center justify-center z-10">
                                     <img 
