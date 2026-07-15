@@ -60,7 +60,7 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050B0A] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans selection:bg-emerald-500/30 overflow-x-hidden">
       <LandingNavbar />
 
       {/* Hero Section */}
@@ -72,7 +72,7 @@ export function LandingPage() {
                 alt="Background" 
                 className="w-full h-full object-cover opacity-20"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#050B0A] via-[#050B0A]/80 to-[#050B0A]"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-main)] via-[var(--bg-main)] to-[var(--bg-main)] opacity-80"></div>
         </div>
 
         <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-20 relative z-10">
@@ -188,7 +188,7 @@ export function LandingPage() {
       </section>
 
       {/* Featured Mentors Section (The "Concept" Showcase) */}
-      <section className="py-12 md:py-20 bg-[#081210] relative overflow-hidden" ref={mentorsRef}>
+      <section className="py-12 md:py-20 bg-[var(--bg-secondary)] relative overflow-hidden" ref={mentorsRef}>
         <CodeBackground />
           <div className="max-w-7xl mx-auto relative z-10">
               <div className="text-center mb-8 md:mb-16 px-4 sm:px-6 lg:px-8">
@@ -303,7 +303,7 @@ export function LandingPage() {
       </section>
 
       {/* Medical Consultation CTA Section */}
-      <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-red-950/30 via-[#050B0A] to-[#050B0A] relative overflow-hidden">
+      <section className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-red-950/30 via-[var(--bg-gradient-via)] to-[var(--bg-gradient-to)] relative overflow-hidden">
         {/* Background Elements */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] -z-10"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-500/10 rounded-full blur-[120px] -z-10"></div>
