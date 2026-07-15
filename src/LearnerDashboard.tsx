@@ -23,6 +23,8 @@ import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useMentors } from './hooks/useData';
 import { useForum } from './contexts/ForumContext';
+import { GoalTracker } from './components/GoalTracker';
+import { recommendMentors } from './lib/recommendations';
 import logo from './assets/logo.png';
 
 export function LearnerDashboard() {
@@ -33,6 +35,17 @@ export function LearnerDashboard() {
   const { getSessionsForUser } = useBooking();
   const sessions = user ? getSessionsForUser(user.id) : [];
   const nextSession = sessions.find(s => new Date(s.date) > new Date());
+  const completedSessions = sessions.filter(s => s.status === 'completed').length;
+  const hoursMentored = completedSessions * 1;
+
+  const profileFields = ['name', 'image', 'about', 'company', 'title', 'phone', 'country'];
+  const filledFieldsCount = profileFields.reduce((count, field) => {
+    return user && (user as any)[field] ? count + 1 : count;
+  }, 0);
+  const profileComplete = Math.round((filledFieldsCount / profileFields.length) * 100);
+
+  const viewHistory = JSON.parse(localStorage.getItem('mentorViewHistory') || '[]');
+  const recommendedMentors = recommendMentors(user, mentors, sessions, viewHistory);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Guest';
   const userImage = user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=Guest";
@@ -180,7 +193,7 @@ export function LearnerDashboard() {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className="w-1 h-8 bg-gradient-to-b from-emerald-500 to-green-600 rounded-full"></div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Top Mentors</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Recommended Mentors</h2>
                 </div>
                 <button 
                     onClick={() => navigate('/mentorship-hub')} 
@@ -191,11 +204,11 @@ export function LearnerDashboard() {
               </div>
               
               <div className="flex gap-4 overflow-x-auto pb-8 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
-                {mentors.slice(0, 5).map((mentor: any) => (
+                {recommendedMentors.slice(0, 5).map((mentor: any) => (
                   <div 
                     key={mentor.id}
                     onClick={() => navigate(`/mentor/${mentor.id}`)}
-                    className="snap-center min-w-[300px] bg-white dark:bg-[#0F1615] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-900/5 transition-all cursor-pointer group relative overflow-hidden"
+                    className="snap-center min-w-[300px] bg-white dark:bg-[#0F1615] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-900/5 transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between"
                   >
                      <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 dark:bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-700"></div>
 
@@ -211,7 +224,12 @@ export function LearnerDashboard() {
                                 </div>
                             )}
                         </div>
-                        <div className="text-right">
+                        <div className="flex flex-col gap-2 items-end">
+                            {mentor.isRecommended && (
+                                <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-md">
+                                    Recommended for You
+                                </span>
+                            )}
                             <div className="flex items-center gap-1 justify-end bg-yellow-400/10 px-2 py-1 rounded-lg">
                                 <span className="text-yellow-600 dark:text-yellow-400 font-bold text-xs">★ {mentor.rating}</span>
                             </div>
