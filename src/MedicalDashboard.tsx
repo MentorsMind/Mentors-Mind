@@ -20,6 +20,9 @@ import {
   Bell
 } from 'lucide-react';
 import type { MedicalProfessional, ConsultationBooking } from './data';
+import { BarChart } from './components/charts/BarChart';
+import { LineChart } from './components/charts/LineChart';
+import { DonutChart } from './components/charts/DonutChart';
 
 export function MedicalDashboard() {
   const navigate = useNavigate();
@@ -108,6 +111,66 @@ export function MedicalDashboard() {
   const acceptedBookings = bookings.filter(b => b.status === 'accepted');
   const completedBookings = bookings.filter(b => b.status === 'completed');
   const totalEarnings = completedBookings.length * professional.consultationFee;
+
+  // Analytics Data Preparation
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const currentMonth = new Date().getMonth();
+  const last6Months = Array.from({length: 6}, (_, i) => {
+    let m = currentMonth - 5 + i;
+    if (m < 0) m += 12;
+    return monthNames[m];
+  });
+
+  // 1. Consultations per month (since week is hard to fake well without actual dates, we'll do months)
+  const consultationCounts = last6Months.map(m => ({ label: m, value: 0 }));
+  completedBookings.forEach(b => {
+    const d = new Date(b.date || b.createdAt);
+    const mName = monthNames[d.getMonth()];
+    const mIndex = consultationCounts.findIndex(x => x.label === mName);
+    if (mIndex !== -1) consultationCounts[mIndex].value++;
+  });
+
+  // 2. Earnings per month (Cumulative)
+  let cumulativeEarnings = 0;
+  const earningsData = last6Months.map(m => ({ label: m, value: 0 }));
+  const sortedCompleted = [...completedBookings].sort((a, b) => new Date(a.date || a.createdAt).getTime() - new Date(b.date || b.createdAt).getTime());
+  
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+  sixMonthsAgo.setHours(0,0,0,0);
+  
+  sortedCompleted.forEach(b => {
+    const d = new Date(b.date || b.createdAt);
+    if (d < sixMonthsAgo) {
+      cumulativeEarnings += professional.consultationFee;
+    }
+  });
+
+  last6Months.forEach(mName => {
+    sortedCompleted.forEach(b => {
+      const d = new Date(b.date || b.createdAt);
+      if (monthNames[d.getMonth()] === mName && d >= sixMonthsAgo) {
+        cumulativeEarnings += professional.consultationFee;
+      }
+    });
+    const mIndex = earningsData.findIndex(x => x.label === mName);
+    if (mIndex !== -1) earningsData[mIndex].value = cumulativeEarnings;
+  });
+
+  // 3. Patient breakdown by reason
+  const reasonMap: Record<string, number> = {};
+  bookings.forEach(b => {
+    const reason = b.reason.length > 20 ? b.reason.substring(0, 20) + '...' : (b.reason || 'General');
+    reasonMap[reason] = (reasonMap[reason] || 0) + 1;
+  });
+  
+  const colors = ['#3b82f6', '#a855f7', '#ef4444', '#10b981', '#f59e0b', '#ec4899'];
+  const reasonDonutData = Object.keys(reasonMap).map((reason, i) => ({
+    label: reason,
+    value: reasonMap[reason],
+    color: colors[i % colors.length]
+  }));
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
@@ -404,61 +467,94 @@ export function MedicalDashboard() {
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                  <TrendingUp className="w-6 h-6 text-emerald-500" />
-                  Performance Metrics
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                        <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-6 h-6 text-emerald-500" />
+                    Performance Metrics
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                          <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <span className="font-semibold text-slate-900 dark:text-white">Total Patients</span>
                       </div>
-                      <span className="font-semibold text-slate-900 dark:text-white">Total Patients</span>
+                      <span className="text-2xl font-bold text-slate-900 dark:text-white">{bookings.length}</span>
                     </div>
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white">{bookings.length}</span>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                          <Star className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                        </div>
+                        <span className="font-semibold text-slate-900 dark:text-white">Average Rating</span>
+                      </div>
+                      <span className="text-2xl font-bold text-slate-900 dark:text-white">{professional.rating}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                          <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="font-semibold text-slate-900 dark:text-white">Profile Views</span>
+                      </div>
+                      <span className="text-2xl font-bold text-slate-900 dark:text-white">{professional.sessions || 0}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                        <Star className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                      </div>
-                      <span className="font-semibold text-slate-900 dark:text-white">Average Rating</span>
+                </div>
+
+                <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                    <DollarSign className="w-6 h-6 text-emerald-500" />
+                    Earnings Overview
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 rounded-xl">
+                      <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Total Earnings</p>
+                      <p className="text-3xl font-bold text-slate-900 dark:text-white">₦{totalEarnings.toLocaleString()}</p>
                     </div>
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white">{professional.rating}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <span className="font-semibold text-slate-900 dark:text-white">Profile Views</span>
+                    <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
+                      <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Per Consultation</p>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">₦{professional.consultationFee.toLocaleString()}</p>
                     </div>
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white">{professional.sessions || 0}</span>
+                    <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
+                      <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Completed Sessions</p>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">{completedBookings.length}</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                  <DollarSign className="w-6 h-6 text-emerald-500" />
-                  Earnings Overview
-                </h3>
-                <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 rounded-xl">
-                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Total Earnings</p>
-                    <p className="text-3xl font-bold text-slate-900 dark:text-white">₦{totalEarnings.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
-                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Per Consultation</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">₦{professional.consultationFee.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl">
-                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Completed Sessions</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">{completedBookings.length}</p>
-                  </div>
+              {/* Chart Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
+                  <h3 className="font-bold text-slate-900 dark:text-white mb-6">Consultations per Month</h3>
+                  <BarChart 
+                    title="Consultations per Month"
+                    desc="Bar chart showing number of completed consultations each month"
+                    data={consultationCounts}
+                    color="#10b981"
+                  />
+                </div>
+                <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
+                  <h3 className="font-bold text-slate-900 dark:text-white mb-6">Earnings Over Time</h3>
+                  <LineChart 
+                    title="Earnings Over Time"
+                    desc="Line chart showing cumulative earnings over the last 6 months"
+                    labels={earningsData.map(d => d.label)}
+                    datasets={[{ label: 'Earnings', data: earningsData.map(d => d.value), color: '#3b82f6' }]}
+                    formatValue={(val) => `₦${val.toLocaleString()}`}
+                  />
+                </div>
+                <div className="bg-white dark:bg-[#1a2e22] rounded-2xl p-6 border border-gray-100 dark:border-white/10">
+                  <h3 className="font-bold text-slate-900 dark:text-white mb-6">Patient Breakdown</h3>
+                  <DonutChart 
+                    title="Patient Breakdown by Reason"
+                    desc="Donut chart showing the primary reasons patients book consultations"
+                    data={reasonDonutData}
+                  />
                 </div>
               </div>
             </div>

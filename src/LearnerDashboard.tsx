@@ -23,6 +23,9 @@ import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useMentors } from './hooks/useData';
 import { useForum } from './contexts/ForumContext';
+import { BarChart } from './components/charts/BarChart';
+import { LineChart } from './components/charts/LineChart';
+import { DonutChart } from './components/charts/DonutChart';
 import logo from './assets/logo.png';
 
 export function LearnerDashboard() {
@@ -44,6 +47,73 @@ export function LearnerDashboard() {
     ? allConsultations.filter((b: any) => b.patientEmail === currentUser.email)
     : [];
   const consultationCount = userConsultations.length;
+
+  // Analytics Data Preparation
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const currentMonth = new Date().getMonth();
+  const last6Months = Array.from({length: 6}, (_, i) => {
+    let m = currentMonth - 5 + i;
+    if (m < 0) m += 12;
+    return monthNames[m];
+  });
+
+  // 1. Sessions per month
+  const sessionCounts = last6Months.map(m => ({ label: m, value: 0 }));
+  sessions.forEach(s => {
+    const d = new Date(s.date);
+    const mName = monthNames[d.getMonth()];
+    const mIndex = sessionCounts.findIndex(x => x.label === mName);
+    if (mIndex !== -1) sessionCounts[mIndex].value++;
+  });
+
+  // 2. Total spend over time
+  let cumulativeSpend = 0;
+  const spendData = last6Months.map(m => ({ label: m, value: 0 }));
+  // Assuming 10000 NGN default if not found
+  const getMentorRate = (id: string) => mentors.find((m: any) => m.id === id)?.hourlyRate || 10000;
+  
+  // Sort sessions chronologically for accurate cumulative calculation
+  const sortedSessions = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  // Actually, we want spend per month or cumulative? "total spend over time" implies cumulative or per month? 
+  // Let's do cumulative over the last 6 months.
+  // First calculate prior spend
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+  sixMonthsAgo.setHours(0,0,0,0);
+  
+  sortedSessions.forEach(s => {
+    const d = new Date(s.date);
+    const cost = getMentorRate(s.mentorId);
+    if (d < sixMonthsAgo) {
+      cumulativeSpend += cost;
+    }
+  });
+
+  last6Months.forEach(mName => {
+    sortedSessions.forEach(s => {
+      const d = new Date(s.date);
+      if (monthNames[d.getMonth()] === mName && d >= sixMonthsAgo) {
+        cumulativeSpend += getMentorRate(s.mentorId);
+      }
+    });
+    const mIndex = spendData.findIndex(x => x.label === mName);
+    if (mIndex !== -1) spendData[mIndex].value = cumulativeSpend;
+  });
+
+  // 3. Sessions by category
+  const categoryMap: Record<string, number> = {};
+  sessions.forEach(s => {
+    const category = mentors.find((m: any) => m.id === s.mentorId)?.category || 'Other';
+    categoryMap[category] = (categoryMap[category] || 0) + 1;
+  });
+  const categoryColors: Record<string, string> = { 'Tech': '#3b82f6', 'Business': '#a855f7', 'Medical': '#ef4444', 'Other': '#10b981' };
+  const donutData = Object.keys(categoryMap).map(cat => ({
+    label: cat,
+    value: categoryMap[cat],
+    color: categoryColors[cat] || '#10b981'
+  }));
 
   return (
     <AppLayout>
@@ -168,6 +238,43 @@ export function LearnerDashboard() {
                 <h3 className="text-lg font-bold mb-1">Upgrade Plan</h3>
                 <p className="text-indigo-100 text-sm opacity-90">Unlock premium features</p>
             </div>
+        </section>
+
+        {/* Analytics Section */}
+        <section className="px-4 md:px-0">
+          <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Analytics Overview</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-6">Sessions per Month</h3>
+              <BarChart 
+                title="Sessions per Month"
+                desc="Bar chart showing the number of mentorship sessions attended each month over the last 6 months"
+                data={sessionCounts} 
+                color="#3b82f6"
+              />
+            </div>
+            <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-6">Total Spend (NGN)</h3>
+              <LineChart 
+                title="Total Spend Over Time"
+                desc="Line chart showing cumulative spending in NGN on mentorship sessions"
+                labels={spendData.map(d => d.label)}
+                datasets={[{ label: 'Total Spend', data: spendData.map(d => d.value), color: '#10b981' }]}
+                formatValue={(val) => `₦${val.toLocaleString()}`}
+              />
+            </div>
+            <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-6">Sessions by Category</h3>
+              <DonutChart 
+                title="Sessions by Category"
+                desc="Donut chart showing the breakdown of sessions by mentor category"
+                data={donutData}
+              />
+            </div>
+          </div>
         </section>
 
         {/* Main Content Grid */}
