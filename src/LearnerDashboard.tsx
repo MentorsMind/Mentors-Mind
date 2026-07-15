@@ -23,6 +23,7 @@ import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useMentors } from './hooks/useData';
 import { useForum } from './contexts/ForumContext';
+import { SessionResources } from './components/SessionResources';
 import logo from './assets/logo.png';
 
 export function LearnerDashboard() {
@@ -315,6 +316,8 @@ export function LearnerDashboard() {
                       <button className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/20">
                           Join Meeting Room
                       </button>
+
+                      <SessionResources sessionId={nextSession.id} isMentor={false} />
                    </div>
                  ) : (
                     <div className="text-center py-10 bg-gray-50 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10">
