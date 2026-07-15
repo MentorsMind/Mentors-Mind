@@ -38,7 +38,9 @@ export function ChatLayout() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Messages</h2>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <label htmlFor="chat-search" className="sr-only">Search chats</label>
                 <input 
+                    id="chat-search"
                     type="text" 
                     placeholder="Search chats..." 
                     className="w-full pl-10 pr-4 py-2 rounded-xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 text-sm outline-none focus:ring-2 focus:ring-primary/50 dark:text-white"
@@ -55,10 +57,11 @@ export function ChatLayout() {
                 threads.map(thread => {
                     const participant = thread.participantDetails.find(p => p.id !== user?.id);
                     return (
-                        <div 
+                        <button 
                             key={thread.id}
                             onClick={() => setActiveThreadId(thread.id)}
-                            className={`p-4 flex gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${activeThreadId === thread.id ? 'bg-primary/5 border-r-4 border-primary' : ''}`}
+                            className={`w-full text-left p-4 flex gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary ${activeThreadId === thread.id ? 'bg-primary/5 border-r-4 border-primary' : ''}`}
+                            aria-label={`Open chat with ${participant?.name}`}
                         >
                             <div className="relative shrink-0">
                                 <div className="w-12 h-12 rounded-full bg-cover bg-center bg-gray-200" style={{ backgroundImage: `url('${participant?.image}')` }}></div>
@@ -79,7 +82,7 @@ export function ChatLayout() {
                                     {thread.lastMessage.senderId === user?.id ? 'You: ' : ''}{thread.lastMessage.content}
                                 </p>
                             </div>
-                        </div>
+                        </button>
                     );
                 })
             )}
@@ -92,7 +95,7 @@ export function ChatLayout() {
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-white/50 dark:bg-black/20 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setActiveThreadId(null)} className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
+                        <button onClick={() => setActiveThreadId(null)} className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Back to messages">
                             <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                         </button>
                         <div className="w-10 h-10 rounded-full bg-cover bg-center bg-gray-200" style={{ backgroundImage: `url('${otherParticipant?.image}')` }}></div>
@@ -105,13 +108,13 @@ export function ChatLayout() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300">
+                        <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Voice call">
                             <Phone className="w-5 h-5" />
                         </button>
-                        <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300">
+                        <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Video call">
                             <Video className="w-5 h-5" />
                         </button>
-                        <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300">
+                        <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary" aria-label="More options">
                             <MoreVertical className="w-5 h-5" />
                         </button>
                     </div>
@@ -142,7 +145,9 @@ export function ChatLayout() {
                 {/* Input */}
                 <div className="p-4 bg-white dark:bg-[#1a2e22] border-t border-gray-100 dark:border-white/5">
                     <form onSubmit={handleSend} className="flex gap-2">
+                        <label htmlFor="message-input" className="sr-only">Type a message</label>
                         <input 
+                            id="message-input"
                             type="text" 
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
@@ -152,7 +157,8 @@ export function ChatLayout() {
                         <button 
                             type="submit"
                             disabled={!inputText.trim()}
-                            className="p-3 rounded-xl bg-primary text-white hover:bg-green-600 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-lg shadow-green-500/20"
+                            className="p-3 rounded-xl bg-primary text-white hover:bg-green-600 disabled:opacity-50 disabled:hover:bg-primary transition-colors shadow-lg shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                            aria-label="Send message"
                         >
                             <Send className="w-5 h-5" />
                         </button>

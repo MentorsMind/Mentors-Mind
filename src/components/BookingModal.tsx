@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, MessageSquare, Loader2, CheckCircle } from 'lucide-react';
 import { useBooking } from '../contexts/BookingContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -42,7 +45,7 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in" aria-modal="true" role="dialog">
         <div className="bg-white dark:bg-[#1a2e22] rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl scale-100 animate-in zoom-in-95">
           <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -57,13 +60,14 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in" aria-modal="true" role="dialog">
+      <div ref={modalRef} className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
         {/* Header */}
         <div className="relative p-6 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5">
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -86,13 +90,14 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="topic-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-primary" />
                   What would you like to discuss?
                 </div>
             </label>
             <textarea 
+              id="topic-input"
               required
               value={topic}
               onChange={(e) => setTopic(e.target.value)}

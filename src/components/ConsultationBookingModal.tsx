@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, User, Mail, Phone, Calendar, Clock, FileText, DollarSign, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import type { ConsultationBooking } from '../data';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface ConsultationBookingModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ export function ConsultationBookingModal({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const { addNotification } = useNotifications();
+  
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -103,7 +106,7 @@ export function ConsultationBookingModal({
   // Success screen
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in" aria-modal="true" role="dialog">
         <div className="bg-white dark:bg-[#1a2e22] rounded-3xl p-8 max-w-md w-full text-center shadow-2xl scale-100 animate-in zoom-in-95">
           <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
@@ -123,13 +126,14 @@ export function ConsultationBookingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-2xl shadow-2xl my-8 animate-in slide-in-from-bottom-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in overflow-y-auto" aria-modal="true" role="dialog">
+      <div ref={modalRef} className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-2xl shadow-2xl my-8 animate-in slide-in-from-bottom-4">
         {/* Header */}
         <div className="relative p-6 border-b border-gray-100 dark:border-white/5 bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20">
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/50 dark:hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-slate-600 dark:text-gray-400" />
           </button>
@@ -173,10 +177,11 @@ export function ConsultationBookingModal({
             </h3>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+              <label htmlFor="patient-name" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                 Full Name *
               </label>
               <input
+                id="patient-name"
                 type="text"
                 required
                 value={formData.patientName}
@@ -188,12 +193,13 @@ export function ConsultationBookingModal({
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+                <label htmlFor="patient-email" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                   Email Address *
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" aria-hidden="true" />
                   <input
+                    id="patient-email"
                     type="email"
                     required
                     value={formData.patientEmail}
@@ -205,12 +211,13 @@ export function ConsultationBookingModal({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+                <label htmlFor="patient-phone" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                   Phone Number *
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" aria-hidden="true" />
                   <input
+                    id="patient-phone"
                     type="tel"
                     required
                     value={formData.patientPhone}
@@ -232,10 +239,11 @@ export function ConsultationBookingModal({
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+                <label htmlFor="patient-date" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                   Preferred Date *
                 </label>
                 <input
+                  id="patient-date"
                   type="date"
                   required
                   min={new Date().toISOString().split('T')[0]}
@@ -246,12 +254,13 @@ export function ConsultationBookingModal({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+                <label htmlFor="patient-time" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                   Preferred Time *
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" aria-hidden="true" />
                   <input
+                    id="patient-time"
                     type="time"
                     required
                     value={formData.preferredTime}
@@ -271,10 +280,11 @@ export function ConsultationBookingModal({
             </h3>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+              <label htmlFor="patient-reason" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                 Reason for Consultation *
               </label>
               <textarea
+                id="patient-reason"
                 required
                 rows={4}
                 value={formData.reason}
@@ -288,10 +298,11 @@ export function ConsultationBookingModal({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
+              <label htmlFor="patient-notes" className="block text-sm font-semibold text-slate-700 dark:text-gray-300 mb-2">
                 Additional Notes (Optional)
               </label>
               <textarea
+                id="patient-notes"
                 rows={3}
                 value={formData.additionalNotes}
                 onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
