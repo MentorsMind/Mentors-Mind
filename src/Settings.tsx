@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, Save, Loader2, RefreshCw, User, Lock, Bell, Moon, LogOut, Plus, Trash2, Video } from 'lucide-react';
+import { Camera, Save, Loader2, RefreshCw, User, Lock, Bell, Moon, LogOut, Plus, Trash2, Video, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 
@@ -9,6 +9,10 @@ export function Settings() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Danger Zone state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -21,7 +25,7 @@ export function Settings() {
   const [newSpecName, setNewSpecName] = useState('');
   const [newSpecPrice, setNewSpecPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'expertise'>('details');
-  const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'security' | 'appearance'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'security' | 'appearance' | 'danger'>('profile');
   
   // Notification preferences
   const [notificationPrefs, setNotificationPrefs] = useState({
@@ -196,6 +200,17 @@ export function Settings() {
               <Moon className="w-5 h-5" />
               <span>Appearance</span>
             </button>
+             <button 
+               onClick={() => setActiveSection('danger')}
+               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                 activeSection === 'danger'
+                   ? 'bg-white dark:bg-[#1a2e22] text-red-600 border border-red-200 shadow-sm'
+                   : 'hover:bg-white dark:hover:bg-[#1a2e22] text-gray-600 dark:text-gray-400 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
+               }`}
+             >
+              <ShieldAlert className="w-5 h-5" />
+              <span>Danger Zone</span>
+            </button>
             <button 
               onClick={logout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors font-medium mt-4"
@@ -347,23 +362,29 @@ export function Settings() {
                       setSuccessMessage('');
 
                       // Validation
-                      if (!passwords.current || !passwords.new || !passwords.confirm) {
+                    if (!passwords.current || !passwords.new || !passwords.confirm) {
                         setErrorMessage('All password fields are required');
                         setLoading(false);
                         return;
-                      }
+                    }
 
-                      if (passwords.new.length < 8) {
+                    if (passwords.new.length < 8) {
                         setErrorMessage('New password must be at least 8 characters');
                         setLoading(false);
                         return;
-                      }
+                    }
 
-                      if (passwords.new !== passwords.confirm) {
+                    if (passwords.new === passwords.current) {
+                        setErrorMessage('New password must be different from current password');
+                        setLoading(false);
+                        return;
+                    }
+
+                    if (passwords.new !== passwords.confirm) {
                         setErrorMessage('Passwords do not match');
                         setLoading(false);
                         return;
-                      }
+                    }
 
                       try {
                         await changePassword(passwords.current, passwords.new);
@@ -492,6 +513,39 @@ export function Settings() {
                       <p className="text-sm text-blue-800 dark:text-blue-300">
                         <strong>Note:</strong> Theme preferences are saved to your browser. You can also use your system's theme preference.
                       </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Danger Zone Section */}
+              {activeSection === 'danger' && (
+                <div className="p-6 md:p-8">
+                  <div className="mb-8">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Danger Zone</h2>
+                    <p className="text-sm text-gray-500">Irreversible account actions</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Delete Account */}
+                    <div className="p-6 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 rounded-xl bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400">
+                          <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Account</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Permanently delete your account and all associated data. This action cannot be undone.
+                          </p>
+                          <button
+                            onClick={() => setShowDeleteModal(true)}
+                            className="mt-4 px-6 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20"
+                          >
+                            Delete My Account
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -748,6 +802,86 @@ export function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-red-500 to-red-600">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/20 transition-colors"
+              >
+                <XCircle className="w-5 h-5 text-white" />
+              </button>
+              <div className="flex items-center gap-3 text-white">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Delete Account</h2>
+                  <p className="text-sm text-white/80">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                To confirm, please type your email address <span className="font-bold text-gray-900 dark:text-white">{user?.email}</span> below.
+              </p>
+              <input
+                type="email"
+                value={deleteEmail}
+                onChange={(e) => setDeleteEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 px-4 py-3 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all dark:text-white"
+              />
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30">
+                <p className="text-sm text-red-800 dark:text-red-300">
+                  <strong>Warning:</strong> All your data will be permanently deleted, including your profile, messages, bookings, and wallet balance.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    // Verify email
+                    if (deleteEmail !== user?.email) {
+                      setErrorMessage('Email does not match');
+                      return;
+                    }
+                    // Delete account data
+                    localStorage.removeItem('currentUser');
+                    // Remove user from users array
+                    const users = JSON.parse(localStorage.getItem('users') || '[]');
+                    const filteredUsers = users.filter((u: any) => u.email !== user.email);
+                    localStorage.setItem('users', JSON.stringify(filteredUsers));
+                    // Clear other user-related data (wallet, transactions, etc.)
+                    localStorage.removeItem(`wallet_${user.id}`);
+                    localStorage.removeItem(`transactions_${user.id}`);
+                    localStorage.removeItem(`payouts_${user.id}`);
+                    // Logout
+                    logout();
+                  }}
+                  disabled={deleteEmail !== user?.email || loading}
+                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Deleting...' : 'Delete Account'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

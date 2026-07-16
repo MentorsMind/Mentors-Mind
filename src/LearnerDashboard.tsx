@@ -23,6 +23,7 @@ import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useMentors } from './hooks/useData';
 import { useForum } from './contexts/ForumContext';
+import { SessionResources } from './components/SessionResources';
 import logo from './assets/logo.png';
 
 export function LearnerDashboard() {
@@ -33,6 +34,17 @@ export function LearnerDashboard() {
   const { getSessionsForUser } = useBooking();
   const sessions = user ? getSessionsForUser(user.id) : [];
   const nextSession = sessions.find(s => new Date(s.date) > new Date());
+  const completedSessions = sessions.filter(s => s.status === 'completed').length;
+  const hoursMentored = completedSessions * 1;
+
+  const profileFields = ['name', 'image', 'about', 'company', 'title', 'phone', 'country'];
+  const filledFieldsCount = profileFields.reduce((count, field) => {
+    return user && (user as any)[field] ? count + 1 : count;
+  }, 0);
+  const profileComplete = Math.round((filledFieldsCount / profileFields.length) * 100);
+
+  const viewHistory = JSON.parse(localStorage.getItem('mentorViewHistory') || '[]');
+  const recommendedMentors = recommendMentors(user, mentors, sessions, viewHistory);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Guest';
   const userImage = user?.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=Guest";
@@ -44,6 +56,15 @@ export function LearnerDashboard() {
     ? allConsultations.filter((b: any) => b.patientEmail === currentUser.email)
     : [];
   const consultationCount = userConsultations.length;
+
+  const completedSessions = sessions.filter(s => s.status === 'completed').length;
+  const hoursMentored = completedSessions * 1; // Assuming 1 hour per session
+
+  const profileFields = ['name', 'image', 'about', 'company', 'title', 'phone', 'country'];
+  const filledFieldsCount = profileFields.reduce((count, field) => {
+    return user && (user as any)[field] ? count + 1 : count;
+  }, 0);
+  const profileComplete = Math.round((filledFieldsCount / profileFields.length) * 100);
 
   return (
     <AppLayout>
@@ -138,25 +159,31 @@ export function LearnerDashboard() {
 
         {/* STATS & PROGRESS (Grid) */}
         <section className="px-4 md:px-0 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-6 rounded-3xl bg-white dark:bg-[#0F1615] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all group">
+            <div 
+              onClick={() => navigate('/session-history')}
+              className="p-6 rounded-3xl bg-white dark:bg-[#0F1615] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            >
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{sessions.length}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Sessions Completed</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Sessions (Total)</p>
             </div>
              <div className="p-6 rounded-3xl bg-white dark:bg-[#0F1615] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all group">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">0h</h3>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{hoursMentored}h</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Hours Mentored</p>
             </div>
-             <div className="p-6 rounded-3xl bg-white dark:bg-[#0F1615] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all group">
+             <div 
+               onClick={() => navigate(user ? `/learner/${user.id}` : '/login')}
+               className="p-6 rounded-3xl bg-white dark:bg-[#0F1615] border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+             >
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <Target className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">80%</h3>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{profileComplete}%</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Profile Complete</p>
             </div>
              <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all cursor-pointer group" onClick={() => navigate('/settings')}>
@@ -173,14 +200,16 @@ export function LearnerDashboard() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
           
-          {/* Left Column: Mentors (Carousel) */}
+          {/* Left Column: Mentors (Carousel) & Goals */}
           <div className="lg:col-span-2 space-y-10">
             
+            <GoalTracker goals={user?.learningGoals || []} />
+
             <section>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className="w-1 h-8 bg-gradient-to-b from-emerald-500 to-green-600 rounded-full"></div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Top Mentors</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Recommended Mentors</h2>
                 </div>
                 <button 
                     onClick={() => navigate('/mentorship-hub')} 
@@ -191,11 +220,11 @@ export function LearnerDashboard() {
               </div>
               
               <div className="flex gap-4 overflow-x-auto pb-8 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
-                {mentors.slice(0, 5).map((mentor: any) => (
+                {recommendedMentors.slice(0, 5).map((mentor: any) => (
                   <div 
                     key={mentor.id}
                     onClick={() => navigate(`/mentor/${mentor.id}`)}
-                    className="snap-center min-w-[300px] bg-white dark:bg-[#0F1615] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-900/5 transition-all cursor-pointer group relative overflow-hidden"
+                    className="snap-center min-w-[300px] bg-white dark:bg-[#0F1615] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-900/5 transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between"
                   >
                      <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 dark:bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-700"></div>
 
@@ -211,7 +240,12 @@ export function LearnerDashboard() {
                                 </div>
                             )}
                         </div>
-                        <div className="text-right">
+                        <div className="flex flex-col gap-2 items-end">
+                            {mentor.isRecommended && (
+                                <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold px-2 py-1 rounded-md">
+                                    Recommended for You
+                                </span>
+                            )}
                             <div className="flex items-center gap-1 justify-end bg-yellow-400/10 px-2 py-1 rounded-lg">
                                 <span className="text-yellow-600 dark:text-yellow-400 font-bold text-xs">★ {mentor.rating}</span>
                             </div>
@@ -315,6 +349,8 @@ export function LearnerDashboard() {
                       <button className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/20">
                           Join Meeting Room
                       </button>
+
+                      <SessionResources sessionId={nextSession.id} isMentor={false} />
                    </div>
                  ) : (
                     <div className="text-center py-10 bg-gray-50 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10">
@@ -334,6 +370,10 @@ export function LearnerDashboard() {
                     <div className="space-y-2">
                         <button onClick={() => navigate(user ? `/learner/${user.id}` : '/login')} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-between group">
                             <span>My Profile</span>
+                            <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                        <button onClick={() => navigate('/session-history')} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-between group">
+                            <span>Session History</span>
                             <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </button>
                          <button onClick={() => navigate('/settings')} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-between group">

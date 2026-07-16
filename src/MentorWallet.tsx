@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Wallet, 
   TrendingUp, 
@@ -12,21 +12,35 @@ import {
   ArrowDownRight,
   Calendar,
   Filter,
-  Search
+  Search,
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useWallet } from './contexts/WalletContext';
 import { useNavigate } from 'react-router-dom';
+import { paystackApi, Bank } from './lib/paystackBanks';
 
 export function MentorWallet() {
   const { user } = useAuth();
   const { wallet, loading, requestPayout, getTransactionHistory, getPayoutHistory, refreshWallet } = useWallet();
   const navigate = useNavigate();
   const [showPayoutModal, setShowPayoutModal] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState('');
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('10000');
   const [filter, setFilter] = useState<'all' | 'successful' | 'pending' | 'failed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [banksLoading, setBanksLoading] = useState(false);
+  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  const [bankSearchQuery, setBankSearchQuery] = useState('');
+  const [showBankDropdown, setShowBankDropdown] = useState(false);
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const [resolvingAccount, setResolvingAccount] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const bankDropdownRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not a mentor
   useEffect(() => {
@@ -35,23 +49,96 @@ export function MentorWallet() {
     }
   }, [user, navigate]);
 
-  const handleRequestPayout = async () => {
+  // Load banks on payout modal open
+  useEffect(() => {
+    if (showPayoutModal) {
+      loadBanks();
+    }
+  }, [showPayoutModal]);
+
+  // Close bank dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (bankDropdownRef.current && !bankDropdownRef.current.contains(event.target as Node)) {
+        setShowBankDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced account resolve
+  const debouncedResolveAccount = useCallback(() => {
+    if (accountNumber.length === 10 && selectedBank?.code) {
+      resolveAccount();
+    } else {
+      setAccountName(null);
+      setAccountError(null);
+    }
+  }, [accountNumber, selectedBank]);
+
+  useEffect(() => {
+    const timerId = setTimeout(debouncedResolveAccount, 500);
+    return () => clearTimeout(timerId);
+  }, [accountNumber, selectedBank, debouncedResolveAccount]);
+
+  const loadBanks = async () => {
+    setBanksLoading(true);
+    try {
+      const fetchedBanks = await paystackApi.getNigerianBanks();
+      setBanks(fetchedBanks);
+    } catch (error) {
+      console.error('Failed to load banks:', error);
+    } finally {
+      setBanksLoading(false);
+    }
+  };
+
+  const resolveAccount = async () => {
+    if (!selectedBank || !accountNumber) return;
+    setResolvingAccount(true);
+    setAccountError(null);
+    try {
+      const result = await paystackApi.resolveAccount(selectedBank.code, accountNumber);
+      if (result.status) {
+        setAccountName(result.data.account_name);
+        setAccountError(null);
+      } else {
+        setAccountError(result.message || 'Failed to resolve account');
+        setAccountName(null);
+      }
+    } catch (error: any) {
+      setAccountError(error.message || 'Failed to resolve account');
+      setAccountName(null);
+    } finally {
+      setResolvingAccount(false);
+    }
+  };
+
+  const filteredBanks = banks.filter((bank) => 
+    bank.name.toLowerCase().includes(bankSearchQuery.toLowerCase())
+  );
+
+  const payoutAmountNum = parseFloat(payoutAmount) || 0;
+  const payoutFee = 50;
+  const netAmount = Math.max(0, payoutAmountNum - payoutFee);
+
+  const handleConfirmPayout = async () => {
     const amount = parseFloat(payoutAmount);
     
-    if (isNaN(amount) || amount < 10000) {
-      alert('Minimum payout amount is ₦10,000');
-      return;
-    }
-
-    if (amount > wallet.balance) {
-      alert('Insufficient balance');
-      return;
-    }
-
     try {
-      await requestPayout(amount);
+      await requestPayout(amount, {
+        bankName: selectedBank?.name,
+        accountNumber,
+        accountName
+      });
+      setShowConfirmationModal(false);
       setShowPayoutModal(false);
-      setPayoutAmount('');
+      setPayoutAmount('10000');
+      setSelectedBank(null);
+      setAccountNumber('');
+      setAccountName(null);
+      setBankSearchQuery('');
       alert('Payout requested successfully! Funds will be transferred within 2-3 business days.');
     } catch (error: any) {
       alert(error.message || 'Failed to request payout. Please try again.');
@@ -357,7 +444,7 @@ export function MentorWallet() {
         {/* Payout Request Modal */}
         {showPayoutModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-emerald-500 to-emerald-600">
                 <button
@@ -390,7 +477,7 @@ export function MentorWallet() {
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Payout Amount
                   </label>
-                  <div className="relative">
+                  <div className="relative mb-4">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₦</span>
                     <input
                       type="number"
@@ -402,8 +489,22 @@ export function MentorWallet() {
                       className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-lg font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                     />
                   </div>
+                  {/* Slider */}
+                  <input
+                    type="range"
+                    min="10000"
+                    max={wallet.balance}
+                    step="1000"
+                    value={payoutAmountNum}
+                    onChange={(e) => setPayoutAmount(e.target.value)}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span>₦10k</span>
+                    <span>{formatCurrency(wallet.balance)}</span>
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Minimum payout: ₦10,000 • Fee: ₦50
+                    Minimum payout: ₦10,000 • Fee: ₦50 • Net: {formatCurrency(netAmount)}
                   </p>
                 </div>
 
@@ -419,6 +520,103 @@ export function MentorWallet() {
                       ₦{(amount / 1000).toFixed(0)}k
                     </button>
                   ))}
+                </div>
+
+                {/* Bank Selection */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Select Bank
+                    </label>
+                    <div className="relative" ref={bankDropdownRef}>
+                      <button
+                        onClick={() => setShowBankDropdown(!showBankDropdown)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-left focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                      >
+                        {selectedBank ? (
+                          <span className="font-semibold text-gray-900 dark:text-white">{selectedBank.name}</span>
+                        ) : (
+                          <span className="text-gray-500">Choose a bank</span>
+                        )}
+                        <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${showBankDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {showBankDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a2e22] border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-10 max-h-60 overflow-y-auto">
+                          <div className="p-2 border-b border-gray-100 dark:border-gray-800">
+                            <input
+                              type="text"
+                              placeholder="Search banks..."
+                              value={bankSearchQuery}
+                              onChange={(e) => setBankSearchQuery(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div className="py-1">
+                            {banksLoading ? (
+                              <div className="p-4 text-center text-gray-500">
+                                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                                Loading banks...
+                              </div>
+                            ) : filteredBanks.length > 0 ? (
+                              filteredBanks.map((bank) => (
+                                <button
+                                  key={bank.code}
+                                  onClick={() => {
+                                    setSelectedBank(bank);
+                                    setShowBankDropdown(false);
+                                    setBankSearchQuery('');
+                                  }}
+                                  className="w-full px-4 py-2 text-left hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                                >
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">{bank.name}</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center text-gray-500 text-sm">No banks found</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Account Number Input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Account Number
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="Enter 10-digit account number"
+                        maxLength={10}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-lg font-semibold focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                      />
+                      {resolvingAccount && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
+                        </div>
+                      )}
+                    </div>
+                    {accountName && (
+                      <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-xl flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <div>
+                          <p className="text-xs text-green-700 dark:text-green-400 font-semibold">Account Name</p>
+                          <p className="text-sm font-bold text-green-800 dark:text-green-300">{accountName}</p>
+                        </div>
+                      </div>
+                    )}
+                    {accountError && (
+                      <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl flex items-center gap-2">
+                        <XCircle className="w-5 h-5 text-red-500" />
+                        <p className="text-sm text-red-700 dark:text-red-400">{accountError}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Info */}
@@ -437,11 +635,95 @@ export function MentorWallet() {
                     Cancel
                   </button>
                   <button
-                    onClick={handleRequestPayout}
-                    disabled={loading || !payoutAmount || parseFloat(payoutAmount) < 10000}
+                    onClick={() => setShowConfirmationModal(true)}
+                    disabled={
+                      loading || 
+                      !payoutAmount || 
+                      parseFloat(payoutAmount) < 10000 || 
+                      !selectedBank || 
+                      !accountName || 
+                      parseFloat(payoutAmount) > wallet.balance
+                    }
                     className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
-                    {loading ? 'Processing...' : 'Request Payout'}
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal */}
+        {showConfirmationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-emerald-500 to-emerald-600">
+                <button
+                  onClick={() => setShowConfirmationModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/20 transition-colors"
+                >
+                  <XCircle className="w-5 h-5 text-white" />
+                </button>
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Confirm Payout</h2>
+                    <p className="text-sm text-white/80">Review details before submitting</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Amount</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(payoutAmountNum)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">Fee</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">-{formatCurrency(payoutFee)}</span>
+                  </div>
+                  <div className="h-px bg-gray-200 dark:bg-gray-700" />
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-900 dark:text-white">Net Amount</span>
+                    <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(netAmount)}</span>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Bank</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{selectedBank?.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Account Number</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{accountNumber}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">Account Name</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{accountName}</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowConfirmationModal(false)}
+                    className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleConfirmPayout}
+                    disabled={loading}
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {loading ? 'Processing...' : 'Confirm Payout'}
                   </button>
                 </div>
               </div>
