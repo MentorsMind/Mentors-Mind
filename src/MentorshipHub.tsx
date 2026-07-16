@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -11,6 +11,7 @@ import {
   Star
 } from 'lucide-react';
 import { useMentors } from './hooks/useData';
+import { useVirtualGrid } from './hooks/useVirtualGrid';
 import { AppLayout } from './components/AppLayout';
 import { BookingModal } from './components/BookingModal';
 import { useAuth } from './contexts/AuthContext';
@@ -23,6 +24,7 @@ export function MentorshipHub() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const mentors = useMentors();
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const filteredMentors = mentors.filter((mentor: any) => {
     const matchesCategory = filter === 'All' || mentor.category === filter;
@@ -31,6 +33,26 @@ export function MentorshipHub() {
                           mentor.company.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const {
+    containerRef,
+    visibleIndices,
+    measureItem,
+    resetToTop,
+    totalHeight,
+  } = useVirtualGrid({ itemCount: filteredMentors.length });
+
+  useEffect(() => {
+    performance.mark('mentorship-hub-render-start');
+    return () => {
+      performance.mark('mentorship-hub-render-end');
+      performance.measure('mentorship-hub-render', 'mentorship-hub-render-start', 'mentorship-hub-render-end');
+    };
+  }, []);
+
+  useEffect(() => {
+    resetToTop();
+  }, [filteredMentors.length, resetToTop]);
 
   return (
     <AppLayout>
@@ -123,12 +145,28 @@ export function MentorshipHub() {
             </div>
 
             {/* MENTOR GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                {filteredMentors.map((mentor: any) => (
-                    <article 
-                        key={mentor.id}
-                        className="group relative bg-white dark:bg-[#0F1615] rounded-3xl p-5 border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:shadow-emerald-900/10 dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-500 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500"
-                    >
+            <div
+                ref={containerRef}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 relative"
+                style={{ minHeight: `${totalHeight}px` }}
+            >
+                {filteredMentors.map((mentor: any, index: number) => {
+                    if (!visibleIndices.has(index)) {
+                        return null;
+                    }
+                    return (
+                        <article
+                            key={mentor.id}
+                            ref={(el) => {
+                                if (el) {
+                                    cardRefs.current.set(index, el);
+                                    measureItem(index, el.offsetHeight);
+                                } else {
+                                    cardRefs.current.delete(index);
+                                }
+                            }}
+                            className="group relative bg-white dark:bg-[#0F1615] rounded-3xl p-5 border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:shadow-emerald-900/10 dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-500 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500"
+                        >
                         {/* Hover Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
 
@@ -196,7 +234,8 @@ export function MentorshipHub() {
                             </div>
                         </div>
                     </article>
-                ))}
+                    );
+                })}
             </div>
 
             {filteredMentors.length === 0 && (
