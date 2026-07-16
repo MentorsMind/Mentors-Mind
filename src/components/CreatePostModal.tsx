@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, MessageCircle, Loader2 } from 'lucide-react';
 import { useForum } from '../contexts/ForumContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('Tech');
   const [loading, setLoading] = useState(false);
+  
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -32,13 +35,14 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in" aria-modal="true" role="dialog">
+      <div ref={modalRef} className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
         {/* Header */}
         <div className="relative p-6 border-b border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/5">
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -51,10 +55,11 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="post-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Title
             </label>
             <input 
+              id="post-title"
               type="text" 
               required
               value={title}
@@ -87,10 +92,11 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="post-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                Content
             </label>
             <textarea 
+              id="post-content"
               required
               value={content}
               onChange={(e) => setContent(e.target.value)}

@@ -48,11 +48,12 @@ export function MentorshipHub() {
                     <button 
                         onClick={() => navigate('/learner-dashboard')}
                         className="p-2 rounded-full bg-white/10 text-white backdrop-blur-md"
+                        aria-label="Go back"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 rounded-full bg-white/10 text-white backdrop-blur-md relative">
+                        <button className="p-2 rounded-full bg-white/10 text-white backdrop-blur-md relative" aria-label="Notifications">
                              <Bell className="w-5 h-5" />
                              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-black"></span>
                         </button>
@@ -76,10 +77,12 @@ export function MentorshipHub() {
                 <div className="max-w-2xl mx-auto relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
                     <div className="relative flex items-center bg-white/10 dark:bg-[#0F1615] border border-white/10 backdrop-blur-xl rounded-2xl p-2 shadow-2xl">
-                        <div className="pl-4 pr-2">
+                        <div className="pl-4 pr-2" aria-hidden="true">
                             <Search className="w-5 h-5 text-gray-400" />
                         </div>
+                        <label htmlFor="mentor-search" className="sr-only">Search mentors</label>
                         <input 
+                            id="mentor-search"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search mentors by name, company, or role..."
@@ -122,10 +125,9 @@ export function MentorshipHub() {
             {/* MENTOR GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 {filteredMentors.map((mentor: any) => (
-                    <div 
+                    <article 
                         key={mentor.id}
-                        onClick={() => user ? navigate(`/mentor/${mentor.id}`) : navigate('/signup')}
-                        className="group relative bg-white dark:bg-[#0F1615] rounded-3xl p-5 border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:shadow-emerald-900/10 dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-500 cursor-pointer overflow-hidden"
+                        className="group relative bg-white dark:bg-[#0F1615] rounded-3xl p-5 border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:shadow-emerald-900/10 dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-500 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500"
                     >
                         {/* Hover Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -171,13 +173,15 @@ export function MentorshipHub() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <button className="py-2.5 px-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-transparent dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-xs font-bold text-slate-600 dark:text-white transition-colors">
+                            <div className="grid grid-cols-2 gap-3 relative z-20">
+                                <button 
+                                    onClick={() => user ? navigate(`/mentor/${mentor.id}`) : navigate('/signup')}
+                                    className="py-2.5 px-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-transparent dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-xs font-bold text-slate-600 dark:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                >
                                     View Profile
                                 </button>
                                 <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
+                                    onClick={() => {
                                         if (user) {
                                             setSelectedMentor(mentor);
                                             setIsBookingOpen(true);
@@ -185,13 +189,13 @@ export function MentorshipHub() {
                                             navigate('/signup');
                                         }
                                     }}
-                                    className="py-2.5 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold hover:bg-slate-800 dark:hover:bg-white/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-black/5"
+                                    className="py-2.5 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold hover:bg-slate-800 dark:hover:bg-white/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 >
                                     Book Now
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </article>
                 ))}
             </div>
 
@@ -214,7 +218,7 @@ export function MentorshipHub() {
 
         {/* Floating Action Button (Mobile) */}
         <div className="fixed bottom-6 right-6 z-40 md:hidden">
-          <button className="flex items-center justify-center rounded-2xl size-14 bg-slate-900 dark:bg-white text-white dark:text-black shadow-2xl shadow-black/20 hover:scale-105 active:scale-95 transition-all">
+          <button className="flex items-center justify-center rounded-2xl size-14 bg-slate-900 dark:bg-white text-white dark:text-black shadow-2xl shadow-black/20 hover:scale-105 active:scale-95 transition-all" aria-label="Add new post">
             <Plus className="w-6 h-6" />
           </button>
         </div>

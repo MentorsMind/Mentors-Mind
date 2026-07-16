@@ -62,6 +62,8 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
   }, [user, isOpen, initialTab]);
 
   if (!isOpen) return null;
+  
+  const modalRef = useFocusTrap(isOpen, onClose);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -99,15 +101,15 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" aria-modal="true" role="dialog">
+      <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       
-      <div className="relative w-full max-w-2xl bg-white dark:bg-[#1a2e22] rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-300">
+      <div ref={modalRef} className="relative w-full max-w-2xl bg-white dark:bg-[#1a2e22] rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-300">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/5">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -132,7 +134,7 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="profile-form" onSubmit={handleSubmit} className="space-y-6">
             
             {(activeTab === 'details' || user?.role !== 'mentor') ? (
                 <>
@@ -167,8 +169,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                        <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                         <input 
+                        id="profile-name"
                         type="text" 
                         name="name"
                         value={formData.name}
@@ -178,8 +181,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                     </div>
                     {user?.role === 'mentor' && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Title</label>
+                            <label htmlFor="profile-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Title</label>
                             <input 
+                            id="profile-title"
                             type="text" 
                             name="title"
                             value={formData.title}
@@ -192,8 +196,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                     </div>
 
                     <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">About</label>
+                    <label htmlFor="profile-about" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">About</label>
                     <textarea 
+                        id="profile-about"
                         name="about"
                         value={formData.about}
                         onChange={handleChange}
@@ -205,8 +210,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                            <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
                             <input 
+                                id="profile-phone"
                                 type="tel" 
                                 name="phone"
                                 value={formData.phone}
@@ -217,8 +223,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State</label>
+                                <label htmlFor="profile-state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State</label>
                                 <input 
+                                    id="profile-state"
                                     type="text" 
                                     name="state"
                                     value={formData.state}
@@ -227,8 +234,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
+                                <label htmlFor="profile-country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
                                 <input 
+                                    id="profile-country"
                                     type="text" 
                                     name="country"
                                     value={formData.country}
@@ -246,8 +254,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Add Specialist Expertise</h3>
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                 <div className="md:col-span-6">
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Specialization</label>
+                                    <label htmlFor="spec-name" className="block text-xs font-medium text-gray-500 mb-1">Specialization</label>
                                     <select
+                                        id="spec-name"
                                         value={newSpecName}
                                         onChange={(e) => setNewSpecName(e.target.value)}
                                         className="w-full rounded-lg bg-white dark:bg-[#1a2e22] border border-gray-200 dark:border-white/10 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -259,8 +268,9 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                                     </select>
                                 </div>
                                 <div className="md:col-span-4">
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Price (₦) / Month</label>
+                                    <label htmlFor="spec-price" className="block text-xs font-medium text-gray-500 mb-1">Price (₦) / Month</label>
                                     <input 
+                                        id="spec-price"
                                         type="number"
                                         placeholder="0.00"
                                         value={newSpecPrice}
@@ -297,7 +307,8 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                                             <button 
                                                 type="button"
                                                 onClick={() => handleRemoveSpecialization(index)}
-                                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                                                className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                aria-label={`Remove specialization ${spec.name}`}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
