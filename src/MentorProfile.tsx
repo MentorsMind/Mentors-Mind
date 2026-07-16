@@ -79,6 +79,19 @@ export function MentorProfile() {
 
 
   useEffect(() => {
+    if (mentor) {
+      const viewHistory = JSON.parse(localStorage.getItem('mentorViewHistory') || '[]');
+      const existingIndex = viewHistory.findIndex((v: any) => v.mentorId === mentor.id);
+      if (existingIndex > -1) {
+          viewHistory[existingIndex].viewedAt = new Date().toISOString();
+      } else {
+          viewHistory.push({ mentorId: mentor.id, viewedAt: new Date().toISOString() });
+      }
+      localStorage.setItem('mentorViewHistory', JSON.stringify(viewHistory));
+    }
+  }, [mentor?.id]);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 100) {
         setShowTitle(true);
