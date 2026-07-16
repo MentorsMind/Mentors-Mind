@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, Save, Loader2, RefreshCw, User, Lock, Bell, Moon, LogOut, Plus, Trash2, Video, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Camera, Save, Loader2, RefreshCw, User, Lock, Bell, Moon, LogOut, Plus, Trash2, Video, AlertTriangle, ShieldAlert, XCircle } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth, type NotificationPreferences } from './contexts/AuthContext';
+import { requestNotificationPermission, getNotificationPermission } from './lib/pushNotifications';
 
 export function Settings() {
   const { user, updateUser, logout, changePassword } = useAuth();
@@ -27,15 +28,46 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState<'details' | 'expertise'>('details');
   const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'security' | 'appearance' | 'danger'>('profile');
   
-  // Notification preferences
-  const [notificationPrefs, setNotificationPrefs] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    bookingAlerts: true,
-    messageAlerts: true,
-    forumReplies: true,
-    systemUpdates: false
-  });
+  // Default notification preferences
+  const defaultPrefs: NotificationPreferences = {
+    booking: true,
+    message: true,
+    reply: true,
+    system: true,
+    consultation: true,
+    pushEnabled: false,
+  };
+
+  // Notification preferences state
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(defaultPrefs);
+
+  // Load user's notification preferences
+  useEffect(() => {
+    if (user) {
+      setNotificationPrefs({ ...defaultPrefs, ...user.notificationPreferences });
+    }
+  }, [user]);
+
+  // Handle notification preference change
+  const handlePrefChange = (key: keyof NotificationPreferences, value: boolean) => {
+    setNotificationPrefs(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Save notification preferences
+  const handleSaveNotificationPrefs = async () => {
+    setLoading(true);
+    try {
+      await updateUser({ notificationPreferences: notificationPrefs });
+      setSuccessMessage('Notification preferences saved!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Failed to save preferences');
+      setTimeout(() => setErrorMessage(''), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Security
   const [passwords, setPasswords] = useState({
@@ -250,37 +282,43 @@ export function Settings() {
               {/* Notifications Section */}
               {activeSection === 'notifications' && (
                 <div className="p-6 md:p-8">
+                  {successMessage && (
+                    <div className="mb-4 px-4 py-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-bold rounded-xl border border-green-200 dark:border-green-500/30">
+                      {successMessage}
+                    </div>
+                  )}
+                  {errorMessage && (
+                    <div className="mb-4 px-4 py-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm font-bold rounded-xl border border-red-200 dark:border-red-500/30">
+                      {errorMessage}
+                    </div>
+                  )}
+
                   <div className="mb-8">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">Notification Preferences</h2>
                     <p className="text-sm text-gray-500">Manage how you receive notifications</p>
                   </div>
 
                   <div className="space-y-6">
-                    {/* Email Notifications */}
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">Email Notifications</p>
-                        <p className="text-sm text-gray-500">Receive notifications via email</p>
-                      </div>
-                      <button
-                        onClick={() => setNotificationPrefs(prev => ({ ...prev, emailNotifications: !prev.emailNotifications }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.emailNotifications ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.emailNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
-
                     {/* Push Notifications */}
                     <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
                       <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">Push Notifications</p>
-                        <p className="text-sm text-gray-500">Receive push notifications in browser</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">Browser Push Notifications</p>
+                        <p className="text-sm text-gray-500">Receive push notifications in your browser</p>
                       </div>
                       <button
-                        onClick={() => setNotificationPrefs(prev => ({ ...prev, pushNotifications: !prev.pushNotifications }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.pushNotifications ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        onClick={async () => {
+                          if (!notificationPrefs.pushEnabled) {
+                            const permission = await requestNotificationPermission();
+                            if (permission === 'granted') {
+                              handlePrefChange('pushEnabled', true);
+                            }
+                          } else {
+                            handlePrefChange('pushEnabled', false);
+                          }
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.pushEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.pushNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.pushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
 
@@ -294,10 +332,10 @@ export function Settings() {
                         <p className="text-sm text-gray-500">New session bookings and updates</p>
                       </div>
                       <button
-                        onClick={() => setNotificationPrefs(prev => ({ ...prev, bookingAlerts: !prev.bookingAlerts }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.bookingAlerts ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        onClick={() => handlePrefChange('booking', !notificationPrefs.booking)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.booking ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.bookingAlerts ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.booking ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
 
@@ -308,10 +346,10 @@ export function Settings() {
                         <p className="text-sm text-gray-500">New direct messages</p>
                       </div>
                       <button
-                        onClick={() => setNotificationPrefs(prev => ({ ...prev, messageAlerts: !prev.messageAlerts }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.messageAlerts ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        onClick={() => handlePrefChange('message', !notificationPrefs.message)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.message ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.messageAlerts ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.message ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
 
@@ -322,10 +360,24 @@ export function Settings() {
                         <p className="text-sm text-gray-500">Replies to your forum posts</p>
                       </div>
                       <button
-                        onClick={() => setNotificationPrefs(prev => ({ ...prev, forumReplies: !prev.forumReplies }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.forumReplies ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        onClick={() => handlePrefChange('reply', !notificationPrefs.reply)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.reply ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.forumReplies ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.reply ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+
+                    {/* Consultation Alerts */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">Consultation Alerts</p>
+                        <p className="text-sm text-gray-500">Consultation session reminders</p>
+                      </div>
+                      <button
+                        onClick={() => handlePrefChange('consultation', !notificationPrefs.consultation)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.consultation ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.consultation ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
 
@@ -336,10 +388,21 @@ export function Settings() {
                         <p className="text-sm text-gray-500">Platform news and feature updates</p>
                       </div>
                       <button
-                        onClick={() => setNotificationPrefs(prev => ({ ...prev, systemUpdates: !prev.systemUpdates }))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.systemUpdates ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        onClick={() => handlePrefChange('system', !notificationPrefs.system)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationPrefs.system ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.systemUpdates ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationPrefs.system ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="pt-4">
+                      <button
+                        onClick={handleSaveNotificationPrefs}
+                        disabled={loading}
+                        className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-green-900/10 flex items-center gap-2"
+                      >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Save Preferences
                       </button>
                     </div>
                   </div>

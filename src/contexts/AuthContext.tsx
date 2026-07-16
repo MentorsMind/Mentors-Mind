@@ -9,6 +9,15 @@ export interface LearningGoal {
   targetSessionCount?: number;
 }
 
+export interface NotificationPreferences {
+  booking: boolean;
+  message: boolean;
+  reply: boolean;
+  system: boolean;
+  consultation: boolean;
+  pushEnabled: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -32,6 +41,7 @@ export interface User {
     likes: number;
   }[];
   learningGoals?: LearningGoal[];
+  notificationPreferences?: NotificationPreferences;
 }
 
 interface AuthContextType {
