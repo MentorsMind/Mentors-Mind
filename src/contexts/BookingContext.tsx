@@ -3,6 +3,15 @@ import { useAuth } from './AuthContext';
 
 import { useNotifications } from './NotificationContext';
 
+export interface SessionResource {
+  id: string;
+  title: string;
+  type: 'link' | 'note' | 'file';
+  content: string; // URL, Markdown text, or Base64 string
+  addedBy: string;
+  addedAt: string; // ISO String
+}
+
 export interface Session {
   id: string;
   mentorId: string;
@@ -15,6 +24,7 @@ export interface Session {
   topic: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
+  resources?: SessionResource[];
 }
 
 interface BookingContextType {
@@ -22,6 +32,8 @@ interface BookingContextType {
   bookSession: (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string) => Promise<void>;
   updateSessionStatus: (sessionId: string, status: Session['status']) => void;
   getSessionsForUser: (userId: string) => Session[];
+  addSessionResource: (sessionId: string, resource: Omit<SessionResource, 'id' | 'addedBy' | 'addedAt'>) => void;
+  removeSessionResource: (sessionId: string, resourceId: string) => void;
   loading: boolean;
 }
 
@@ -105,8 +117,53 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
+  const addSessionResource = (sessionId: string, resource: Omit<SessionResource, 'id' | 'addedBy' | 'addedAt'>) => {
+    if (!user) return;
+    const newResource: SessionResource = {
+      ...resource,
+      id: crypto.randomUUID(),
+      addedBy: user.id,
+      addedAt: new Date().toISOString()
+    };
+
+    let sessionToUpdate: Session | undefined;
+
+    setSessions(prev => prev.map(s => {
+      if (s.id === sessionId) {
+        sessionToUpdate = s;
+        return {
+          ...s,
+          resources: [...(s.resources || []), newResource]
+        };
+      }
+      return s;
+    }));
+
+    if (sessionToUpdate && user.id === sessionToUpdate.mentorId) {
+       addNotification(
+          sessionToUpdate.learnerId,
+          'system',
+          'New Session Resource',
+          `${user.name} added a new ${resource.type} to your session.`,
+          '/learner/dashboard' // Learner dashboard
+       );
+    }
+  };
+
+  const removeSessionResource = (sessionId: string, resourceId: string) => {
+    setSessions(prev => prev.map(s => {
+      if (s.id === sessionId && s.resources) {
+        return {
+          ...s,
+          resources: s.resources.filter(r => r.id !== resourceId)
+        };
+      }
+      return s;
+    }));
+  };
+
   return (
-    <BookingContext.Provider value={{ sessions, bookSession, updateSessionStatus, getSessionsForUser, loading }}>
+    <BookingContext.Provider value={{ sessions, bookSession, updateSessionStatus, getSessionsForUser, addSessionResource, removeSessionResource, loading }}>
       {children}
     </BookingContext.Provider>
   );
