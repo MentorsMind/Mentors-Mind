@@ -10,8 +10,26 @@
 }
 
 @layer base {
+  :root {
+    --bg-main: #ffffff;
+    --text-main: #111827;
+    --bg-secondary: #f9fafb;
+    --bg-gradient-via: #ffffff;
+    --bg-gradient-to: #ffffff;
+  }
+  
+  :root.dark {
+    --bg-main: #050B0A;
+    --text-main: #ffffff;
+    --bg-secondary: #081210;
+    --bg-gradient-via: #050B0A;
+    --bg-gradient-to: #050B0A;
+  }
+
   body {
-    @apply bg-[#050B0A] text-white;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 

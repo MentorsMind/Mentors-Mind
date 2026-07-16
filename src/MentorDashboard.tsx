@@ -15,6 +15,7 @@ import { useMentorStats } from './hooks/useMentorStats';
 import { useBooking } from './contexts/BookingContext';
 import { useForum } from './contexts/ForumContext';
 import { NotificationDropdown } from './components/NotificationDropdown';
+import { SessionResources } from './components/SessionResources';
 
 import { EditProfileModal } from './components/EditProfileModal';
 
@@ -274,6 +275,7 @@ export function MentorDashboard() {
                                 <button className="w-full mt-3 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-lg shadow-green-900/10 hover:bg-green-600 transition-colors">
                                     Join Meeting
                                 </button>
+                                <SessionResources sessionId={nextSession.id} isMentor={true} />
                             </div>
                         </div>
                     </section>

@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import { BookingProvider } from './contexts/BookingContext'
 import { MessageProvider } from './contexts/MessageContext'
 import { ForumProvider } from './contexts/ForumContext'
@@ -13,7 +14,8 @@ import { WalletProvider } from './contexts/WalletContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
       <NotificationProvider>
         <WalletProvider>
           <BookingProvider>
@@ -28,5 +30,6 @@ createRoot(document.getElementById('root')!).render(
         </WalletProvider>
       </NotificationProvider>
     </AuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 )
