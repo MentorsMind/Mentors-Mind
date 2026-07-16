@@ -1,5 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
+export interface LearningGoal {
+  id: string;
+  title: string;
+  targetDate: string;
+  category: string;
+  completedSessionIds: string[];
+  targetSessionCount?: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -22,6 +31,7 @@ export interface User {
     createdAt: string;
     likes: number;
   }[];
+  learningGoals?: LearningGoal[];
 }
 
 interface AuthContextType {

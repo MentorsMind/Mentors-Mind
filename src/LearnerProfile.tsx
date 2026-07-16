@@ -10,6 +10,7 @@ import {
 import { useAuth } from './contexts/AuthContext';
 import { AppLayout } from './components/AppLayout';
 import { useBooking } from './contexts/BookingContext';
+import { GoalTracker } from './components/GoalTracker';
 
 export function LearnerProfile() {
   const navigate = useNavigate();
@@ -74,6 +75,8 @@ export function LearnerProfile() {
                         {profileUser.about || "This user hasn't written a bio yet."}
                     </p>
                  </div>
+                 
+                 <GoalTracker goals={profileUser.learningGoals || []} />
             </div>
 
             {/* Right Col: Stats / Activity */}
