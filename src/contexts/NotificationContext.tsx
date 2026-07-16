@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth, type User } from './AuthContext';
+import { sendBrowserNotification } from '../lib/pushNotifications';
 
 export interface Notification {
   id: string;
@@ -21,6 +22,19 @@ interface NotificationContextType {
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+function getUserPreferences(user: User | undefined | null) {
+  const defaultPrefs = {
+    booking: true,
+    message: true,
+    reply: true,
+    system: true,
+    consultation: true,
+    pushEnabled: false,
+  };
+  if (!user) return defaultPrefs;
+  return { ...defaultPrefs, ...user.notificationPreferences };
+}
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -87,6 +101,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const unreadCount = userNotifications.filter(n => !n.read).length;
 
   const addNotification = (userId: string, type: Notification['type'], title: string, message: string, link?: string) => {
+    // Get recipient user from localStorage
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const recipientUser = allUsers.find((u: User) => u.id === userId);
+
+    // Get recipient preferences
+    const prefs = getUserPreferences(recipientUser);
+
+    // Check if notification type is enabled
+    if (!prefs[type]) {
+      return;
+    }
+
     const newNotification: Notification = {
       id: crypto.randomUUID(),
       userId,
@@ -98,6 +124,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       timestamp: new Date().toISOString()
     };
     setNotifications(prev => [newNotification, ...prev]);
+
+    // Send browser push notification if enabled
+    if (prefs.pushEnabled) {
+      sendBrowserNotification(title, message, recipientUser?.image);
+    }
   };
 
   const markAsRead = (id: string) => {
