@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Camera, Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { ImageUploader } from './ImageUploader';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'expertise'>(initialTab);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     title: '',
@@ -134,25 +136,34 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
             
             {(activeTab === 'details' || user?.role !== 'mentor') ? (
                 <>
-                    <div className="flex items-center gap-6">
-                    <div className="relative group">
-                        <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-white/5 bg-cover bg-center border-2 border-white dark:border-[#1a2e22] shadow-md" style={{ backgroundImage: `url('${formData.image}')` }}></div>
-                        <button type="button" className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-white shadow-lg shadow-green-900/20 hover:bg-green-600 transition-colors">
-                        <Camera className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profile Photo URL</label>
-                        <input 
-                        type="text" 
-                        name="image"
-                        value={formData.image}
-                        onChange={handleChange}
-                        placeholder="https://..."
-                        className="w-full rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:text-white" 
+                    {isUploadingImage ? (
+                      <div className="p-4 bg-gray-50 dark:bg-[#1a2e22]/50 rounded-xl border border-gray-200 dark:border-white/10">
+                        <ImageUploader 
+                          onUpload={(base64) => {
+                            setFormData({ ...formData, image: base64 });
+                            setIsUploadingImage(false);
+                          }}
+                          onCancel={() => setIsUploadingImage(false)}
                         />
-                    </div>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-6">
+                        <div className="relative group">
+                            <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-white/5 bg-cover bg-center border-2 border-white dark:border-[#1a2e22] shadow-md" style={{ backgroundImage: `url('${formData.image}')` }}></div>
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profile Photo</label>
+                            <button 
+                              type="button"
+                              onClick={() => setIsUploadingImage(true)}
+                              className="px-4 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/10 transition-colors dark:text-white flex items-center gap-2"
+                            >
+                              <Camera className="w-4 h-4" />
+                              Change Photo
+                            </button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
