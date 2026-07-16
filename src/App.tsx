@@ -21,6 +21,7 @@ import { MedicalLogin } from './MedicalLogin';
 import { PatientConsultations } from './PatientConsultations';
 import { MedicalProfile } from './MedicalProfile';
 import { DoctorsDirectory } from './DoctorsDirectory';
+import { SessionHistory } from './SessionHistory';
 
 import { LandingPage } from './LandingPage';
 
@@ -34,6 +35,7 @@ function App() {
       <Route path="/role-selection" element={<RoleSelection />} />
       <Route path="/learner-dashboard" element={<LearnerDashboard />} />
       <Route path="/mentor-dashboard" element={<MentorDashboard />} />
+      <Route path="/session-history" element={<SessionHistory />} />
       <Route path="/mentor/wallet" element={<MentorWallet />} />
       <Route path="/mentorship-hub" element={<MentorshipHub />} />
       <Route path="/mentor/:id" element={<MentorProfile />} />
