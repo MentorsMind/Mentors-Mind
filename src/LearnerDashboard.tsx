@@ -197,6 +197,43 @@ export function LearnerDashboard() {
             </div>
         </section>
 
+        {/* Analytics Section */}
+        <section className="px-4 md:px-0">
+          <div className="flex items-center gap-3 mb-6">
+              <div className="w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Analytics Overview</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-6">Sessions per Month</h3>
+              <BarChart 
+                title="Sessions per Month"
+                desc="Bar chart showing the number of mentorship sessions attended each month over the last 6 months"
+                data={sessionCounts} 
+                color="#3b82f6"
+              />
+            </div>
+            <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-6">Total Spend (NGN)</h3>
+              <LineChart 
+                title="Total Spend Over Time"
+                desc="Line chart showing cumulative spending in NGN on mentorship sessions"
+                labels={spendData.map(d => d.label)}
+                datasets={[{ label: 'Total Spend', data: spendData.map(d => d.value), color: '#10b981' }]}
+                formatValue={(val) => `₦${val.toLocaleString()}`}
+              />
+            </div>
+            <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-6">Sessions by Category</h3>
+              <DonutChart 
+                title="Sessions by Category"
+                desc="Donut chart showing the breakdown of sessions by mentor category"
+                data={donutData}
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
           
