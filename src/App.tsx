@@ -24,39 +24,43 @@ import { DoctorsDirectory } from './DoctorsDirectory';
 import { SessionHistory } from './SessionHistory';
 
 import { LandingPage } from './LandingPage';
+import { ToastContainer } from './components/ToastContainer';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/role-selection" element={<RoleSelection />} />
-      <Route path="/learner-dashboard" element={<LearnerDashboard />} />
-      <Route path="/mentor-dashboard" element={<MentorDashboard />} />
-      <Route path="/session-history" element={<SessionHistory />} />
-      <Route path="/mentor/wallet" element={<MentorWallet />} />
-      <Route path="/mentorship-hub" element={<MentorshipHub />} />
-      <Route path="/mentor/:id" element={<MentorProfile />} />
-      <Route path="/medical-profile/:id" element={<MedicalProfile />} />
-      <Route path="/forum" element={<ForumFeed />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/messages" element={<ChatLayout />} />
-      <Route path="/learner/:id" element={<LearnerProfile />} />
-      <Route path="/medical" element={<MedicalHub />} />
-      <Route path="/doctors" element={<DoctorsDirectory />} />
-      <Route path="/medical-registration" element={<MedicalRegistration />} />
-      <Route path="/medical-login" element={<MedicalLogin />} />
-      <Route path="/medical-dashboard" element={<MedicalDashboard />} />
-      <Route path="/my-consultations" element={<PatientConsultations />} />
-      {/* Redirect old hub route to learner dashboard */}
-      <Route path="/hub" element={<Navigate to="/learner-dashboard" replace />} />
-      {/* Catch all - redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/role-selection" element={<RoleSelection />} />
+        <Route path="/learner-dashboard" element={<LearnerDashboard />} />
+        <Route path="/mentor-dashboard" element={<MentorDashboard />} />
+        <Route path="/session-history" element={<SessionHistory />} />
+        <Route path="/mentor/wallet" element={<MentorWallet />} />
+        <Route path="/mentorship-hub" element={<MentorshipHub />} />
+        <Route path="/mentor/:id" element={<MentorProfile />} />
+        <Route path="/medical-profile/:id" element={<MedicalProfile />} />
+        <Route path="/forum" element={<ForumFeed />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/messages" element={<ChatLayout />} />
+        <Route path="/learner/:id" element={<LearnerProfile />} />
+        <Route path="/medical" element={<MedicalHub />} />
+        <Route path="/doctors" element={<DoctorsDirectory />} />
+        <Route path="/medical-registration" element={<MedicalRegistration />} />
+        <Route path="/medical-login" element={<MedicalLogin />} />
+        <Route path="/medical-dashboard" element={<MedicalDashboard />} />
+        <Route path="/my-consultations" element={<PatientConsultations />} />
+        {/* Redirect old hub route to learner dashboard */}
+        <Route path="/hub" element={<Navigate to="/learner-dashboard" replace />} />
+        {/* Catch all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <ToastContainer />
+    </>
   );
 }
 

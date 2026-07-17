@@ -24,6 +24,7 @@ export interface Post {
   answers: number; // calculated from comments length usually
   comments: Comment[];
   likes: number;
+  likedBy: string[]; // user IDs who liked the post
 }
 
 interface ForumContextType {
@@ -31,7 +32,7 @@ interface ForumContextType {
   searchPosts: (query: string) => Post[];
   createPost: (title: string, content: string, category: string) => void;
   addComment: (postId: string, content: string) => void;
-  likePost: (postId: string) => void;
+  likePost: (postId: string) => boolean;
   loading: boolean;
 }
 
@@ -49,7 +50,8 @@ const INITIAL_POSTS: Post[] = [
     timestamp: new Date(Date.now() - 7200000).toISOString(),
     answers: 12,
     comments: [],
-    likes: 5
+    likes: 5,
+    likedBy: []
   },
   {
     id: '2',
@@ -62,7 +64,8 @@ const INITIAL_POSTS: Post[] = [
     timestamp: new Date(Date.now() - 14400000).toISOString(),
     answers: 8,
     comments: [],
-    likes: 15
+    likes: 15,
+    likedBy: []
   },
   {
     id: '3',
@@ -75,7 +78,8 @@ const INITIAL_POSTS: Post[] = [
     timestamp: new Date(Date.now() - 86400000).toISOString(),
     answers: 24,
     comments: [],
-    likes: 32
+    likes: 32,
+    likedBy: []
   }
 ];
 
@@ -89,18 +93,22 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedPosts = localStorage.getItem('posts');
     if (storedPosts) {
-      setPosts(JSON.parse(storedPosts));
+      const parsed = JSON.parse(storedPosts) as Post[];
+      // Backfill likedBy for older stored posts that lack it
+      setPosts(parsed.map(p => ({ ...p, likedBy: p.likedBy || [] })));
     } else {
       setPosts(INITIAL_POSTS);
     }
     setLoading(false);
   }, []);
 
-  // Save posts
+  // Debounced persistence to localStorage (300ms) to avoid thrashing on rapid clicks
   useEffect(() => {
-    if (!loading) {
+    if (loading) return;
+    const timer = setTimeout(() => {
       localStorage.setItem('posts', JSON.stringify(posts));
-    }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [posts, loading]);
 
   const createPost = (title: string, content: string, category: string) => {
@@ -118,7 +126,8 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString(),
       answers: 0,
       comments: [],
-      likes: 0
+      likes: 0,
+      likedBy: []
     };
 
     setPosts(prev => [newPost, ...prev]);
@@ -159,13 +168,28 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const likePost = (postId: string) => {
+  const likePost = (postId: string): boolean => {
+    if (!user) {
+      return false;
+    }
+
     setPosts(prev => prev.map(post => {
       if (post.id === postId) {
-        return { ...post, likes: post.likes + 1 };
+        const liked = post.likedBy.includes(user.id);
+        const likedBy = liked
+          ? post.likedBy.filter(id => id !== user.id)
+          : [...post.likedBy, user.id];
+
+        return {
+          ...post,
+          likedBy,
+          likes: Math.max(0, post.likes + (liked ? -1 : 1))
+        };
       }
       return post;
     }));
+
+    return true;
   };
 
   const searchPosts = (query: string) => {

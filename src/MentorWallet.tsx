@@ -20,7 +20,7 @@ import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useWallet } from './contexts/WalletContext';
 import { useNavigate } from 'react-router-dom';
-import { paystackApi, Bank } from './lib/paystackBanks';
+import { paystackApi, type Bank } from './lib/paystackBanks';
 
 export function MentorWallet() {
   const { user } = useAuth();
