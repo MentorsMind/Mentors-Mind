@@ -1,4 +1,4 @@
-import { User } from '../contexts/AuthContext';
+import { type User } from '../contexts/AuthContext';
 
 export interface ViewHistoryEntry {
   mentorId: string;

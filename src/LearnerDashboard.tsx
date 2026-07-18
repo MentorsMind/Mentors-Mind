@@ -22,8 +22,11 @@ import { NotificationDropdown } from './components/NotificationDropdown';
 import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useMentors } from './hooks/useData';
+import { recommendMentors } from './lib/recommendations';
 import { useForum } from './contexts/ForumContext';
 import { SessionResources } from './components/SessionResources';
+import { GoalTracker } from './components/GoalTracker';
+import { BarChart, LineChart, DonutChart } from './components/Charts';
 import logo from './assets/logo.png';
 
 export function LearnerDashboard() {
@@ -43,6 +46,46 @@ export function LearnerDashboard() {
   }, 0);
   const profileComplete = Math.round((filledFieldsCount / profileFields.length) * 100);
 
+  // Derive chart data from sessions
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - (5 - i));
+    return d;
+  });
+  const monthLabels = last6Months.map(d => d.toLocaleString('default', { month: 'short' }));
+
+  const sessionCounts = last6Months.map((d, i) => ({
+    label: monthLabels[i],
+    value: sessions.filter(s => {
+      const sd = new Date(s.date);
+      return sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear();
+    }).length,
+  }));
+
+  const sessionPrice = (s: any) => Number(s.price) || 0;
+  const sortedSessions = [...sessions].sort(
+    (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  let runningTotal = 0;
+  const spendData = sortedSessions.map(s => {
+    runningTotal += sessionPrice(s);
+    const d = new Date(s.date);
+    return {
+      label: d.toLocaleString('default', { month: 'short' }),
+      value: runningTotal,
+    };
+  });
+  if (spendData.length === 0) {
+    spendData.push({ label: 'Now', value: 0 });
+  }
+
+  const categoryMap: Record<string, number> = {};
+  sessions.forEach((s: any) => {
+    const cat = s.category || s.mentorCategory || 'General';
+    categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+  });
+  const donutData = Object.entries(categoryMap).map(([label, value]) => ({ label, value }));
+
   const viewHistory = JSON.parse(localStorage.getItem('mentorViewHistory') || '[]');
   const recommendedMentors = recommendMentors(user, mentors, sessions, viewHistory);
 
@@ -56,15 +99,6 @@ export function LearnerDashboard() {
     ? allConsultations.filter((b: any) => b.patientEmail === currentUser.email)
     : [];
   const consultationCount = userConsultations.length;
-
-  const completedSessions = sessions.filter(s => s.status === 'completed').length;
-  const hoursMentored = completedSessions * 1; // Assuming 1 hour per session
-
-  const profileFields = ['name', 'image', 'about', 'company', 'title', 'phone', 'country'];
-  const filledFieldsCount = profileFields.reduce((count, field) => {
-    return user && (user as any)[field] ? count + 1 : count;
-  }, 0);
-  const profileComplete = Math.round((filledFieldsCount / profileFields.length) * 100);
 
   return (
     <AppLayout>
@@ -207,8 +241,6 @@ export function LearnerDashboard() {
             <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
               <h3 className="font-bold text-slate-900 dark:text-white mb-6">Sessions per Month</h3>
               <BarChart 
-                title="Sessions per Month"
-                desc="Bar chart showing the number of mentorship sessions attended each month over the last 6 months"
                 data={sessionCounts} 
                 color="#3b82f6"
               />
@@ -216,18 +248,13 @@ export function LearnerDashboard() {
             <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
               <h3 className="font-bold text-slate-900 dark:text-white mb-6">Total Spend (NGN)</h3>
               <LineChart 
-                title="Total Spend Over Time"
-                desc="Line chart showing cumulative spending in NGN on mentorship sessions"
                 labels={spendData.map(d => d.label)}
                 datasets={[{ label: 'Total Spend', data: spendData.map(d => d.value), color: '#10b981' }]}
-                formatValue={(val) => `₦${val.toLocaleString()}`}
               />
             </div>
             <div className="bg-white dark:bg-[#0F1615] rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
               <h3 className="font-bold text-slate-900 dark:text-white mb-6">Sessions by Category</h3>
               <DonutChart 
-                title="Sessions by Category"
-                desc="Donut chart showing the breakdown of sessions by mentor category"
                 data={donutData}
               />
             </div>

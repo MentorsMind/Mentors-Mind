@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, 
-  ThumbsUp, 
-  MessageCircle, 
-  Share2, 
-  Send 
+import {
+  ChevronLeft,
+  Heart,
+  MessageCircle,
+  Share2,
+  Send
 } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
 import { useForum } from './contexts/ForumContext';
 import { useAuth } from './contexts/AuthContext';
+import { showToast } from './lib/toast';
 
 export function PostDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export function PostDetail() {
   const { posts, addComment, likePost } = useForum();
   const { user } = useAuth();
   const [commentContent, setCommentContent] = useState('');
+  const [popped, setPopped] = useState(false);
 
   const post = posts.find(p => p.id === id);
 
@@ -82,12 +84,30 @@ export function PostDetail() {
             </div>
 
             <div className="flex items-center gap-4 pt-6 border-t border-gray-100 dark:border-white/5">
-                <button 
-                  onClick={() => likePost(post.id)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-primary/10 hover:text-primary transition-colors text-gray-600 dark:text-gray-300 font-medium"
+                <button
+                  onClick={() => {
+                    const ok = likePost(post.id);
+                    if (!ok) {
+                      showToast('Please sign up to like posts', 'info');
+                      navigate('/signup');
+                      return;
+                    }
+                    setPopped(true);
+                    setTimeout(() => setPopped(false), 300);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors ${
+                    post.likedBy.includes(user?.id || '')
+                      ? 'bg-rose-500/10 text-rose-500'
+                      : 'bg-gray-50 dark:bg-white/5 hover:bg-rose-500/10 hover:text-rose-500 text-gray-600 dark:text-gray-300'
+                  }`}
+                  aria-pressed={post.likedBy.includes(user?.id || '')}
                 >
-                    <ThumbsUp className="w-5 h-5" />
-                    {post.likes} Likes
+                    <Heart
+                      className="w-5 h-5"
+                      fill={post.likedBy.includes(user?.id || '') ? 'currentColor' : 'none'}
+                    />
+                    <span className={popped ? 'animate-like-pop' : ''}>{post.likes}</span>
+                    <span className="sr-only">Likes</span>
                 </button>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300 font-medium ml-auto md:ml-0">
                     <MessageCircle className="w-5 h-5" />

@@ -1,5 +1,5 @@
 import { Target, CheckCircle } from 'lucide-react';
-import { LearningGoal } from '../contexts/AuthContext';
+import { type LearningGoal } from '../contexts/AuthContext';
 
 interface GoalTrackerProps {
   goals: LearningGoal[];

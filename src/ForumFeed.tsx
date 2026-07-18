@@ -1,22 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MessageCircle, 
-  Search, 
-  ThumbsUp, 
-  Share2, 
+import {
+  MessageCircle,
+  Search,
+  Heart,
+  Share2,
   Plus
 } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
 import { useForum } from './contexts/ForumContext';
 import { CreatePostModal } from './components/CreatePostModal';
+import { useAuth } from './contexts/AuthContext';
+import { showToast } from './lib/toast';
 
 export function ForumFeed() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { searchPosts, likePost } = useForum();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [poppedId, setPoppedId] = useState<string | null>(null);
 
   const filteredPosts = searchPosts(searchQuery).filter(post => 
     activeCategory === 'All' || post.category === activeCategory
@@ -108,12 +112,30 @@ export function ForumFeed() {
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">{post.content}</p>
 
               <div className="flex items-center gap-6 pt-4 border-t border-gray-50 dark:border-white/5">
-                <button 
-                  onClick={() => likePost(post.id)}
-                  className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors text-sm font-medium"
+                <button
+                  onClick={() => {
+                    const ok = likePost(post.id);
+                    if (!ok) {
+                      showToast('Please sign up to like posts', 'info');
+                      navigate('/signup');
+                      return;
+                    }
+                    setPoppedId(post.id);
+                    setTimeout(() => setPoppedId(prev => (prev === post.id ? null : prev)), 300);
+                  }}
+                  className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+                    post.likedBy.includes(user?.id || '')
+                      ? 'text-rose-500 hover:text-rose-600'
+                      : 'text-gray-500 hover:text-rose-500'
+                  }`}
+                  aria-pressed={post.likedBy.includes(user?.id || '')}
                 >
-                  <ThumbsUp className="w-5 h-5" />
-                  {post.likes} Likes
+                  <Heart
+                    className="w-5 h-5"
+                    fill={post.likedBy.includes(user?.id || '') ? 'currentColor' : 'none'}
+                  />
+                  <span className={poppedId === post.id ? 'animate-like-pop' : ''}>{post.likes}</span>
+                  <span className="sr-only">Likes</span>
                 </button>
                 <button className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors text-sm font-medium">
                   <MessageCircle className="w-5 h-5" />
