@@ -169,9 +169,9 @@ export function Settings() {
       });
       setSuccessMessage('Profile updated successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to update profile', error);
-      setErrorMessage(error.message || "Failed to save changes. Please try again.");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to save changes. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -454,8 +454,8 @@ export function Settings() {
                         setSuccessMessage('Password updated successfully!');
                         setPasswords({ current: '', new: '', confirm: '' });
                         setTimeout(() => setSuccessMessage(''), 3000);
-                      } catch (error: any) {
-                        setErrorMessage(error.message || 'Failed to update password');
+                      } catch (error) {
+                        setErrorMessage(error instanceof Error ? error.message : 'Failed to update password');
                       } finally {
                         setLoading(false);
                       }
@@ -807,7 +807,7 @@ export function Settings() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {formData.specializations.map((spec: any, index: number) => (
+                                        {formData.specializations.map((spec, index: number) => (
                                             <div key={index} className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:border-primary/20 transition-colors group">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -925,8 +925,8 @@ export function Settings() {
                     // Delete account data
                     localStorage.removeItem('currentUser');
                     // Remove user from users array
-                    const users = JSON.parse(localStorage.getItem('users') || '[]');
-                    const filteredUsers = users.filter((u: any) => u.email !== user.email);
+                    const users: Array<{ email: string }> = JSON.parse(localStorage.getItem('users') || '[]');
+                    const filteredUsers = users.filter((u) => u.email !== user.email);
                     localStorage.setItem('users', JSON.stringify(filteredUsers));
                     // Clear other user-related data (wallet, transactions, etc.)
                     localStorage.removeItem(`wallet_${user.id}`);

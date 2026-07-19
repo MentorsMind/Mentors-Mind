@@ -124,7 +124,7 @@ export function PatientConsultations() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setFilter(tab.id as any)}
+              onClick={() => setFilter(tab.id as 'all' | 'pending' | 'accepted' | 'completed' | 'declined')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all whitespace-nowrap ${
                 filter === tab.id
                   ? 'bg-emerald-500 text-white shadow-lg'

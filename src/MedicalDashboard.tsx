@@ -308,7 +308,7 @@ export function MedicalDashboard() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'requests' | 'analytics' | 'contributions')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-emerald-500 text-white shadow-lg'

@@ -56,6 +56,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+interface StoredUser extends User {
+  password: string;
+}
+
+function loadUsers(): StoredUser[] {
+  return JSON.parse(localStorage.getItem('users') || '[]');
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,8 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return true;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const foundUser = users.find((u: any) => u.email === email && u.password === password);
+    const users = loadUsers();
+    const foundUser = users.find((u) => u.email === email && u.password === password);
     
     if (foundUser) {
       const { password: _, ...safeUser } = foundUser;
@@ -165,8 +173,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         
         // Also update in the main 'users' list
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex((u: User) => u.email === user.email);
+    const users = loadUsers();
+        const userIndex = users.findIndex((u) => u.email === user.email);
         
         // If user exists in DB, update them. If not (managed/demo user), we might skip or add them.
         // For persistence of Demo users across relogin, we should probably upsert?
@@ -204,8 +212,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // For regular users stored in localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userIndex = users.findIndex((u: any) => u.email === user.email);
+    const users = loadUsers();
+    const userIndex = users.findIndex((u) => u.email === user.email);
 
     if (userIndex === -1) {
       throw new Error('User not found');

@@ -15,10 +15,11 @@ import { useVirtualGrid } from './hooks/useVirtualGrid';
 import { AppLayout } from './components/AppLayout';
 import { BookingModal } from './components/BookingModal';
 import { useAuth } from './contexts/AuthContext';
+import type { AnyMentor } from './types';
 
 export function MentorshipHub() {
   const [filter, setFilter] = useState('All');
-  const [selectedMentor, setSelectedMentor] = useState<any>(null);
+  const [selectedMentor, setSelectedMentor] = useState<AnyMentor | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export function MentorshipHub() {
   const mentors = useMentors();
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const filteredMentors = mentors.filter((mentor: any) => {
+  const filteredMentors = mentors.filter((mentor) => {
     const matchesCategory = filter === 'All' || mentor.category === filter;
     const matchesSearch = mentor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           mentor.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -150,7 +151,7 @@ export function MentorshipHub() {
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 relative"
                 style={{ minHeight: `${totalHeight}px` }}
             >
-                {filteredMentors.map((mentor: any, index: number) => {
+                {filteredMentors.map((mentor, index: number) => {
                     if (!visibleIndices.has(index)) {
                         return null;
                     }
@@ -196,12 +197,12 @@ export function MentorshipHub() {
                             
                             {/* Skills/Tags */}
                             <div className="flex flex-wrap gap-2 mb-6">
-                                {mentor.specializations?.slice(0, 2).map((spec: any, i: number) => (
+                                {mentor.specializations?.slice(0, 2).map((spec, i: number) => (
                                     <span key={i} className="text-[10px] items-center px-2.5 py-1 rounded-full bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/10">
-                                        {spec.name}
+                                        {typeof spec === 'string' ? spec : spec.name}
                                     </span>
                                 ))}
-                                {mentor.tags?.length > 0 && !mentor.specializations && mentor.tags.slice(0, 2).map((tag: any, i: number) => (
+                                {mentor.tags?.length > 0 && !mentor.specializations && mentor.tags.slice(0, 2).map((tag, i: number) => (
                                      <span key={i} className="text-[10px] items-center px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/5">
                                         {tag}
                                      </span>

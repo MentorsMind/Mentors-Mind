@@ -107,8 +107,8 @@ export function MentorWallet() {
         setAccountError(result.message || 'Failed to resolve account');
         setAccountName(null);
       }
-    } catch (error: any) {
-      setAccountError(error.message || 'Failed to resolve account');
+    } catch (error) {
+      setAccountError(error instanceof Error ? error.message : 'Failed to resolve account');
       setAccountName(null);
     } finally {
       setResolvingAccount(false);
@@ -140,8 +140,8 @@ export function MentorWallet() {
       setAccountName(null);
       setBankSearchQuery('');
       alert('Payout requested successfully! Funds will be transferred within 2-3 business days.');
-    } catch (error: any) {
-      alert(error.message || 'Failed to request payout. Please try again.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to request payout. Please try again.');
     }
   };
 
@@ -302,7 +302,7 @@ export function MentorWallet() {
                   <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   <select
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value as any)}
+                    onChange={(e) => setFilter(e.target.value as 'all' | 'successful' | 'pending' | 'failed')}
                     className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="all">All Status</option>

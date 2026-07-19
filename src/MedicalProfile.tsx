@@ -338,7 +338,7 @@ export function MedicalProfile() {
                 Patient Reviews
               </h2>
               <div className="space-y-4 max-h-80 overflow-y-auto">
-                {doctor.reviews.slice(0, 3).map((review: any) => (
+                {doctor.reviews.slice(0, 3).map((review) => (
                   <div key={review.id} className="p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                     <div className="flex items-center gap-3 mb-3">
                       <img

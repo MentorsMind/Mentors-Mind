@@ -49,7 +49,7 @@ export function LandingPage() {
   
   // Get top 3 rated mentors or just first 3 for showcase
   const featuredMentors = allMentors
-    .filter((m: any) => m.image) 
+    .filter((m) => m.image) 
     .slice(0, 3); 
 
   // Fallback if no mentors yet
@@ -201,7 +201,7 @@ export function LandingPage() {
               {/* Mobile: Horizontal Scroll Carousel */}
               <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-4">
                   <div className="flex gap-6 px-4" style={{ width: 'max-content' }}>
-                      {displayMentors.map((mentor: any, index: number) => (
+                      {displayMentors.map((mentor, index: number) => (
                           <div 
                             key={mentor.id} 
                             onClick={() => user ? navigate(`/mentor/${mentor.id}`) : navigate('/signup')}
@@ -251,7 +251,7 @@ export function LandingPage() {
 
               {/* Desktop: Grid Layout */}
               <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 px-4 sm:px-6 lg:px-8">
-                  {displayMentors.map((mentor: any, index: number) => (
+                  {displayMentors.map((mentor, index: number) => (
                       <div 
                         key={mentor.id} 
                         onClick={() => user ? navigate(`/mentor/${mentor.id}`) : navigate('/signup')}
@@ -270,7 +270,7 @@ export function LandingPage() {
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                   />
                                    {/* Overlay on hover */}
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center backdrop-blur-sm">
+                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-out p-4 text-center backdrop-blur-sm">
                                         <p className="text-emerald-400 font-bold text-sm mb-1">{mentor.role}</p>
                                         <p className="text-white text-xs opacity-90">@{mentor.company}</p>
                                         <div className="mt-3 bg-white text-black text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">

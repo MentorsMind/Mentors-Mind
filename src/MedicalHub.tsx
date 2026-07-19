@@ -35,9 +35,10 @@ import { useMentors } from './hooks/useData';
 import { LandingFooter } from './components/LandingFooter';
 import { ConsultationBookingModal } from './components/ConsultationBookingModal';
 import { useMessages } from './contexts/MessageContext';
+import type { AnyMentor } from './types';
 
 export function MedicalHub() {
-  const [selectedMentor, setSelectedMentor] = useState<any>(null);
+  const [selectedMentor, setSelectedMentor] = useState<AnyMentor | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const { createThread } = useMessages();
   const [searchQuery, setSearchQuery] = useState('');
@@ -599,7 +600,7 @@ export function MedicalHub() {
 
             {/* Doctor Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPros.map((doctor: any) => (
+              {filteredPros.map((doctor) => (
                 <div 
                   key={doctor.id}
                   onClick={() => navigate(`/medical-profile/${doctor.id}`)}

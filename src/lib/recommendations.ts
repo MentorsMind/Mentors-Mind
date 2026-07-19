@@ -1,19 +1,21 @@
 import { type User } from '../contexts/AuthContext';
+import type { Mentor } from '../data';
+import type { Session } from '../contexts/BookingContext';
 
 export interface ViewHistoryEntry {
   mentorId: string;
   viewedAt: string;
 }
 
-export interface RecommendedMentor extends any {
+export interface RecommendedMentor extends Mentor {
   recommendationScore: number;
   isRecommended: boolean;
 }
 
 export function recommendMentors(
   user: User | null,
-  allMentors: any[],
-  sessions: any[],
+  allMentors: Mentor[],
+  sessions: Session[],
   viewHistory: ViewHistoryEntry[]
 ): RecommendedMentor[] {
   // 1. Identify past booking patterns

@@ -13,6 +13,7 @@ import { BookingModal } from './components/BookingModal';
 import { ConsultationBookingModal } from './components/ConsultationBookingModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { useAuth } from './contexts/AuthContext';
+import type { ViewHistoryEntry } from './types';
 
 export function MentorProfile() {
   const navigate = useNavigate();
@@ -80,8 +81,8 @@ export function MentorProfile() {
 
   useEffect(() => {
     if (mentor) {
-      const viewHistory = JSON.parse(localStorage.getItem('mentorViewHistory') || '[]');
-      const existingIndex = viewHistory.findIndex((v: any) => v.mentorId === mentor.id);
+      const viewHistory: ViewHistoryEntry[] = JSON.parse(localStorage.getItem('mentorViewHistory') || '[]');
+      const existingIndex = viewHistory.findIndex((v) => v.mentorId === mentor.id);
       if (existingIndex > -1) {
           viewHistory[existingIndex].viewedAt = new Date().toISOString();
       } else {
@@ -201,12 +202,12 @@ export function MentorProfile() {
                                 )}
                                 {mentor.specializations && mentor.specializations.length > 0 && (
                                    <div className="flex flex-wrap gap-2 mb-4">
-                                      {mentor.specializations.map((spec: any, i: number) => (
-                                          <span 
-                                              key={i} 
-                                              className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-sm font-semibold border border-green-100 dark:border-green-800"
-                                          >
-                                              {spec.name} - ₦{spec.price}/month
+                                       {mentor.specializations.map((spec, i: number) => (
+                                           <span 
+                                               key={i} 
+                                               className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-sm font-semibold border border-green-100 dark:border-green-800"
+                                           >
+                                               {typeof spec === 'string' ? spec : `${spec.name} - ₦${spec.price}/month`}
                                           </span>
                                       ))}
                                    </div>
@@ -314,7 +315,7 @@ export function MentorProfile() {
                     {/* Tips List */}
                     <div className="space-y-4">
                         {mentor.tips && mentor.tips.length > 0 ? (
-                            mentor.tips.map((tip: any) => (
+                            mentor.tips.map((tip) => (
                                 <div key={tip.id} className="p-5 rounded-xl bg-white dark:bg-[#1c2e24] shadow-sm border border-gray-100 dark:border-white/5">
                                     <div className="flex items-start gap-4">
                                         <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-100 dark:border-white/10">
@@ -347,7 +348,7 @@ export function MentorProfile() {
                     <div className="px-4 md:px-0">
                         <h3 className="text-base font-bold mb-4 text-gray-900 dark:text-white">Experience</h3>
                         <div className="relative pl-2 space-y-8 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-200 dark:before:bg-white/10">
-                            {mentor.experience.map((exp: any) => (
+                            {mentor.experience.map((exp) => (
                                 <div key={exp.id} className="relative pl-10">
                                 <div className="absolute left-0 top-1 w-10 h-10 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 flex items-center justify-center z-10">
                                     <img 
@@ -376,7 +377,7 @@ export function MentorProfile() {
                             <a className="text-xs font-semibold text-primary" href="#">See All</a>
                         </div>
                         <div className="flex overflow-x-auto gap-4 px-4 pb-4 md:px-0 no-scrollbar snap-x snap-mandatory">
-                            {mentor.reviews.map((review: any) => (
+                            {mentor.reviews.map((review) => (
                                 <div key={review.id} className="snap-center shrink-0 w-[280px] p-5 rounded-xl bg-white dark:bg-[#1c2e24] border border-gray-100 dark:border-white/5 shadow-sm flex flex-col justify-between h-auto">
                                 <div>
                                     <div className="flex gap-1 text-primary mb-3">
