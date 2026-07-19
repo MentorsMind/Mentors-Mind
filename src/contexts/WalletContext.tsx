@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
+export interface BankDetails {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+}
+
 export interface Transaction {
   id: string;
   reference: string;
@@ -14,7 +20,7 @@ export interface Transaction {
   mentorEarnings: number;
   status: 'pending' | 'successful' | 'failed' | 'refunded';
   date: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Payout {
@@ -46,7 +52,7 @@ interface WalletContextType {
   transactions: Transaction[];
   payouts: Payout[];
   loading: boolean;
-  requestPayout: (amount: number, bankDetails?: any) => Promise<void>;
+  requestPayout: (amount: number, bankDetails?: BankDetails) => Promise<void>;
   getTransactionHistory: () => Transaction[];
   getPayoutHistory: () => Payout[];
   refreshWallet: () => Promise<void>;
@@ -190,7 +196,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const requestPayout = async (amount: number, bankDetails?: any) => {
+  const requestPayout = async (amount: number, bankDetails?: BankDetails) => {
     if (!user) throw new Error('User not authenticated');
     if (amount < 10000) throw new Error('Minimum payout amount is ₦10,000');
     if (amount > wallet.balance) throw new Error('Insufficient balance');

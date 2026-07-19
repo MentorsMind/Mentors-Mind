@@ -10,6 +10,7 @@ import {
 import { AppLayout } from './components/AppLayout';
 import { useNotifications } from './contexts/NotificationContext';
 import { useAuth } from './contexts/AuthContext';
+import type { AppNotification } from './types';
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export function Notifications() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: AppNotification) => {
     markAsRead(notification.id);
     if (notification.link) {
       navigate(notification.link);

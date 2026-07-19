@@ -20,8 +20,8 @@ export function LearnerProfile() {
   const { user: authUser } = useAuth();
   
   // Try to find the user in local storage if not current auth user
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const profileUser = users.find((u: any) => u.id === id) || (authUser?.id === id ? authUser : null);
+  const users: User[] = JSON.parse(localStorage.getItem('users') || '[]');
+  const profileUser = users.find((u) => u.id === id) || (authUser?.id === id ? authUser : null);
 
   const { getSessionsForUser } = useBooking();
   const sessions = profileUser ? getSessionsForUser(profileUser.id) : [];

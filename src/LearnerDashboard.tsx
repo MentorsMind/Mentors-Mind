@@ -22,7 +22,9 @@ import { NotificationDropdown } from './components/NotificationDropdown';
 import { AppLayout } from './components/AppLayout';
 import { useAuth } from './contexts/AuthContext';
 import { useMentors } from './hooks/useData';
-import { recommendMentors } from './lib/recommendations';
+import { recommendMentors, type RecommendedMentor } from './lib/recommendations';
+import type { Session } from './contexts/BookingContext';
+import type { ConsultationBooking } from './data';
 import { useForum } from './contexts/ForumContext';
 import { SessionResources } from './components/SessionResources';
 import { GoalTracker } from './components/GoalTracker';
@@ -40,9 +42,9 @@ export function LearnerDashboard() {
   const completedSessions = sessions.filter(s => s.status === 'completed').length;
   const hoursMentored = completedSessions * 1;
 
-  const profileFields = ['name', 'image', 'about', 'company', 'title', 'phone', 'country'];
+  const profileFields: (keyof User)[] = ['name', 'image', 'about', 'company', 'title', 'phone', 'country'];
   const filledFieldsCount = profileFields.reduce((count, field) => {
-    return user && (user as any)[field] ? count + 1 : count;
+    return user && user[field] ? count + 1 : count;
   }, 0);
   const profileComplete = Math.round((filledFieldsCount / profileFields.length) * 100);
 
@@ -62,9 +64,9 @@ export function LearnerDashboard() {
     }).length,
   }));
 
-  const sessionPrice = (s: any) => Number(s.price) || 0;
+  const sessionPrice = (s: Session & { price?: string }) => Number(s.price) || 0;
   const sortedSessions = [...sessions].sort(
-    (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   let runningTotal = 0;
   const spendData = sortedSessions.map(s => {
@@ -80,7 +82,7 @@ export function LearnerDashboard() {
   }
 
   const categoryMap: Record<string, number> = {};
-  sessions.forEach((s: any) => {
+  sessions.forEach((s: Session & { category?: string; mentorCategory?: string }) => {
     const cat = s.category || s.mentorCategory || 'General';
     categoryMap[cat] = (categoryMap[cat] || 0) + 1;
   });
@@ -96,7 +98,7 @@ export function LearnerDashboard() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
   const allConsultations = JSON.parse(localStorage.getItem('consultationBookings') || '[]');
   const userConsultations = currentUser?.email 
-    ? allConsultations.filter((b: any) => b.patientEmail === currentUser.email)
+    ? allConsultations.filter((b: ConsultationBooking) => b.patientEmail === currentUser.email)
     : [];
   const consultationCount = userConsultations.length;
 
@@ -284,7 +286,7 @@ export function LearnerDashboard() {
               </div>
               
               <div className="flex gap-4 overflow-x-auto pb-8 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
-                {recommendedMentors.slice(0, 5).map((mentor: any) => (
+                {recommendedMentors.slice(0, 5).map((mentor: RecommendedMentor) => (
                   <div 
                     key={mentor.id}
                     onClick={() => navigate(`/mentor/${mentor.id}`)}

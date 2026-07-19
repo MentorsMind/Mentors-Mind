@@ -15,6 +15,7 @@ import {
 import { useMentors } from './hooks/useData';
 import { ConsultationBookingModal } from './components/ConsultationBookingModal';
 import { useMessages } from './contexts/MessageContext';
+import type { AnyMentor } from './types';
 
 export function DoctorsDirectory() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export function DoctorsDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpecialization, setSelectedSpecialization] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedMentor, setSelectedMentor] = useState<any>(null);
+  const [selectedMentor, setSelectedMentor] = useState<AnyMentor | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   // Filter for Medical Professionals ONLY
@@ -145,7 +146,7 @@ export function DoctorsDirectory() {
           </div>
         ) : (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
-            {filteredPros.map((doctor: any) => (
+            {filteredPros.map((doctor) => (
               <div
                 key={doctor.id}
                 onClick={() => navigate(`/medical-profile/${doctor.id}`)}
