@@ -1,53 +1,140 @@
-import React, { Component } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from "react";
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = {
+      hasError: false,
+      error: null,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return {
+      hasError: true,
+      error,
+    };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    const { onError } = this.props;
+
+    // Log error details with context information
+    console.error("ErrorBoundary caught an error:", {
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Call custom error handler if provided
+    if (onError) {
+      onError(error, errorInfo);
+    }
+
+    // Send error report if VITE_ERROR_REPORTING_URL is defined
+    const errorReportingUrl = import.meta.env.VITE_ERROR_REPORTING_URL;
+    if (errorReportingUrl) {
+      this.sendErrorReport(error, errorInfo, errorReportingUrl);
+    }
   }
 
-  render() {
+  private async sendErrorReport(
+    error: Error,
+    errorInfo: ErrorInfo,
+    url: string,
+  ): Promise<void> {
+    try {
+      await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          error: {
+            message: error.message,
+            stack: error.stack,
+          },
+          componentStack: errorInfo.componentStack,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+        }),
+      });
+    } catch (reportError) {
+      console.error("Failed to send error report:", reportError);
+    }
+  }
+
+  private handleReset = (): void => {
+    this.setState({
+      hasError: false,
+      error: null,
+    });
+  };
+
+  render(): ReactNode {
     if (this.state.hasError) {
+      // Use custom fallback if provided, otherwise use default FallbackUI
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
       return (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <h3 className="font-bold text-sm">Something went wrong</h3>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+            <div className="mb-4">
+              <svg
+                className="mx-auto h-16 w-16 text-red-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Something went wrong
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              We're sorry, but something unexpected happened. Please try again
+              or go back to the home page.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={this.handleReset}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Try Again
+              </button>
+              <a
+                href="/"
+                className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                Go Home
+              </a>
+            </div>
           </div>
-          <p className="mt-2 text-xs text-red-600 dark:text-red-300">
-            The notes editor encountered an error. Please refresh the page to continue.
-          </p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className="mt-3 px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-500 transition-colors"
-          >
-            Try Again
-          </button>
         </div>
       );
     }
@@ -55,3 +142,5 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;
