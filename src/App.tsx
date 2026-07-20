@@ -24,6 +24,7 @@ import { DoctorsDirectory } from './DoctorsDirectory';
 import { SessionHistory } from './SessionHistory';
 
 import { LandingPage } from './LandingPage';
+import { AdminPanel } from './AdminPanel';
 import { ToastContainer } from './components/ToastContainer';
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
         <Route path="/medical-login" element={<MedicalLogin />} />
         <Route path="/medical-dashboard" element={<MedicalDashboard />} />
         <Route path="/my-consultations" element={<PatientConsultations />} />
+        <Route path="/admin" element={<AdminPanel />} />
         {/* Redirect old hub route to learner dashboard */}
         <Route path="/hub" element={<Navigate to="/learner-dashboard" replace />} />
         {/* Catch all - redirect to home */}
