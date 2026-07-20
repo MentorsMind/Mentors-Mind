@@ -1,18 +1,39 @@
-# Storybook Integration - Task List
+# Route Guards Implementation TODO
 
 ## Steps
 
 - [x] Plan approved
-- [x] Step 1: Install Storybook 8 and dependencies
-- [x] Step 2: Create `.storybook/main.ts`
-- [x] Step 3: Create `.storybook/preview.tsx`
-- [x] Step 4: Update `.gitignore` (add storybook-static/)
-- [x] Step 5: Create `src/components/BookingModal.stories.tsx`
-- [x] Step 6: Create `src/components/NotificationDropdown.stories.tsx`
-- [x] Step 7: Create `src/components/PasswordStrength.stories.tsx`
-- [x] Step 8: Create `src/components/AnimatedCounter.stories.tsx`
-- [x] Step 9: Create `src/components/DarkModeToggle.stories.tsx`
-- [x] Step 10: Create `src/components/SocialProof.stories.tsx`
-- [x] Step 11: Create `src/components/Confetti.stories.tsx`
-- [x] Step 12: Create `src/components/EditProfileModal.stories.tsx`
-- [ ] Step 13: Run `pnpm storybook` and verify
+- [x] 1. Fix `src/components/guards/ProtectedRoute.tsx` — Handle medical role type properly
+- [x] 2. Update `src/App.tsx` — Wrap routes with ProtectedRoute and MedicalGuard
+- [x] 3. Update `src/Login.tsx` — Add `location.state.from` post-login redirect
+
+## Completed Changes
+
+### `src/components/guards/ProtectedRoute.tsx`
+
+- Cast `user.role` to string at runtime to support `'medical'` role (set directly via localStorage by `MedicalLogin.tsx`)
+- Rest of existing logic preserved (redirect unauthenticated → `/login` with `state.from`, role mismatch → role-appropriate dashboard)
+
+### `src/App.tsx`
+
+- Imported `ProtectedRoute` and `MedicalGuard`
+- Wrapped public/guest-only routes (separated at top): `/`, `/about`, `/login`, `/signup`, `/role-selection`, `/medical`, `/doctors`, `/medical-registration`, `/medical-login`, `/medical-profile/:id`, `/mentor/:id`, `/learner/:id`, `/contact`
+- Wrapped general authenticated routes with `<ProtectedRoute>`: `/session-history`, `/mentorship-hub`, `/forum`, `/settings`, `/notifications`, `/messages`
+- Wrapped mentor-only routes with `<ProtectedRoute requiredRole="mentor">`: `/mentor-dashboard`, `/onboarding`, `/mentor/wallet`
+- Wrapped learner-only route with `<ProtectedRoute requiredRole="learner">`: `/learner-dashboard`
+- Wrapped medical-only routes with `<MedicalGuard>`: `/medical-dashboard`, `/my-consultations`
+
+### `src/Login.tsx`
+
+- Added `useLocation` import
+- Read `from` from `location.state.from` (set by ProtectedRoute/MedicalGuard on redirect)
+- After successful login: if `from` exists and isn't `/login` or `/signup`, redirect to `from`; otherwise fallback to role-appropriate dashboard
+- Used `{ replace: true }` to prevent back-button loop to login page
+
+### `src/components/guards/MedicalGuard.tsx`
+
+- No changes needed — already correct:
+  - Reads `currentUser` from localStorage
+  - Checks against `medicalProfessionals` localStorage store
+  - Redirects to `/medical-registration` if not found
+  - Passes `location.state.from` for post-login redirect

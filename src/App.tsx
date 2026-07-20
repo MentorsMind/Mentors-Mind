@@ -26,6 +26,8 @@ import { SessionHistory } from "./SessionHistory";
 
 import { LandingPage } from "./LandingPage";
 import { ToastContainer } from "./components/ToastContainer";
+import { ProtectedRoute } from "./components/guards/ProtectedRoute";
+import { MedicalGuard } from "./components/guards/MedicalGuard";
 
 function App() {
   return (
@@ -36,26 +38,119 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/role-selection" element={<RoleSelection />} />
-        <Route path="/learner-dashboard" element={<LearnerDashboard />} />
-        <Route path="/mentor-dashboard" element={<MentorDashboard />} />
-        <Route path="/onboarding" element={<OnboardingWizard />} />
-        <Route path="/session-history" element={<SessionHistory />} />
-        <Route path="/mentor/wallet" element={<MentorWallet />} />
-        <Route path="/mentorship-hub" element={<MentorshipHub />} />
-        <Route path="/mentor/:id" element={<MentorProfile />} />
-        <Route path="/medical-profile/:id" element={<MedicalProfile />} />
-        <Route path="/forum" element={<ForumFeed />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/messages" element={<ChatLayout />} />
-        <Route path="/learner/:id" element={<LearnerProfile />} />
         <Route path="/medical" element={<MedicalHub />} />
         <Route path="/doctors" element={<DoctorsDirectory />} />
         <Route path="/medical-registration" element={<MedicalRegistration />} />
         <Route path="/medical-login" element={<MedicalLogin />} />
-        <Route path="/medical-dashboard" element={<MedicalDashboard />} />
-        <Route path="/my-consultations" element={<PatientConsultations />} />
+        <Route path="/medical-profile/:id" element={<MedicalProfile />} />
+        <Route path="/mentor/:id" element={<MentorProfile />} />
+        <Route path="/learner/:id" element={<LearnerProfile />} />
+        <Route path="/contact" element={<Contact />} />
+
+        {/* Protected Routes — any authenticated user */}
+        <Route
+          path="/session-history"
+          element={
+            <ProtectedRoute>
+              <SessionHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mentorship-hub"
+          element={
+            <ProtectedRoute>
+              <MentorshipHub />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/forum"
+          element={
+            <ProtectedRoute>
+              <ForumFeed />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <ChatLayout />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mentor-only Routes */}
+        <Route
+          path="/mentor-dashboard"
+          element={
+            <ProtectedRoute requiredRole="mentor">
+              <MentorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute requiredRole="mentor">
+              <OnboardingWizard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mentor/wallet"
+          element={
+            <ProtectedRoute requiredRole="mentor">
+              <MentorWallet />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Learner-only Routes */}
+        <Route
+          path="/learner-dashboard"
+          element={
+            <ProtectedRoute requiredRole="learner">
+              <LearnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Medical-only Routes (checked against medicalProfessionals store) */}
+        <Route
+          path="/medical-dashboard"
+          element={
+            <MedicalGuard>
+              <MedicalDashboard />
+            </MedicalGuard>
+          }
+        />
+        <Route
+          path="/my-consultations"
+          element={
+            <MedicalGuard>
+              <PatientConsultations />
+            </MedicalGuard>
+          }
+        />
+
         {/* Redirect old hub route to learner dashboard */}
         <Route
           path="/hub"
