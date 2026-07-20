@@ -56,6 +56,7 @@ function App() {
         <Route path="/medical-login" element={<MedicalLogin />} />
         <Route path="/medical-dashboard" element={<MedicalDashboard />} />
         <Route path="/my-consultations" element={<PatientConsultations />} />
+        <Route path="/admin" element={<AdminPanel />} />
         {/* Redirect old hub route to learner dashboard */}
         <Route
           path="/hub"

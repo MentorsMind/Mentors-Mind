@@ -89,6 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    // Check if user is banned
+    const users = loadUsers();
+    const bannedCheckUser = users.find((u) => u.email === email);
+    if (bannedCheckUser?.banned) {
+      throw new Error('Your account has been banned. Please contact support for assistance.');
+    }
+
     // Hardcoded Demo Users
     if (email === "sarah@techflow.com" && password === "demo123") {
       const demoUser: User = {
@@ -130,6 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (foundUser) {
+      if (foundUser.banned) {
+        throw new Error('Your account has been banned. Please contact support for assistance.');
+      }
       const { password: _, ...safeUser } = foundUser;
       setUser(safeUser);
       localStorage.setItem("currentUser", JSON.stringify(safeUser));
