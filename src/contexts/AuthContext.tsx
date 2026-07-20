@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { hashPassword, verifyPassword } from "../lib/crypto";
 
 export interface LearningGoal {
   id: string;
@@ -61,7 +62,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 interface StoredUser extends User {
-  password: string;
+  passwordHash: string;
+  passwordSalt: string;
 }
 
 function loadUsers(): StoredUser[] {
@@ -89,8 +91,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Hardcoded Demo Users
-    if (email === "sarah@techflow.com" && password === "demo123") {
+    // Hardcoded Demo Users with hashed credentials
+    // sarah@techflow.com / demo123
+    if (
+      email === "sarah@techflow.com" &&
+      (await verifyPassword(
+        password,
+        "25952f708acea6a47fa51627cf386341c47a76d406e8d7d0413ce4afac72a27f",
+        "cfab91c2c7087830eb7be34d4273b7c2",
+      ))
+    ) {
       const demoUser: User = {
         id: "demo_sarah",
         name: "Sarah Chen",
@@ -109,7 +119,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
 
-    if (email === "elena@finloop.com" && password === "demo123") {
+    // elena@finloop.com / demo123
+    if (
+      email === "elena@finloop.com" &&
+      (await verifyPassword(
+        password,
+        "c6ffbc1ca62c4283a4c7e172acf8e40e055deaa01261e6e9fc8e7a9147c7014b",
+        "b225d90dd22f479c5b45f361a097e724",
+      ))
+    ) {
       const demoUser: User = {
         id: "demo_elena",
         name: "Elena Rodriguez",
@@ -125,12 +143,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const users = loadUsers();
-    const foundUser = users.find(
-      (u) => u.email === email && u.password === password,
-    );
+    const foundUser = users.find((u) => u.email === email);
 
-    if (foundUser) {
-      const { password: _, ...safeUser } = foundUser;
+    if (
+      foundUser &&
+      (await verifyPassword(
+        password,
+        foundUser.passwordHash,
+        foundUser.passwordSalt,
+      ))
+    ) {
+      const { passwordHash: _, passwordSalt: __, ...safeUser } = foundUser;
       setUser(safeUser);
       localStorage.setItem("currentUser", JSON.stringify(safeUser));
       return true;
@@ -145,22 +168,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const users = JSON.parse(localStorage.getItem("users") || "[]");
 
+    // Hash the password before storing
+    const { hash, salt } = await hashPassword(userData.password);
+
     // Generate a random avatar if none provided (using DiceBear or placeholder)
-    // We'll use a high-quality placeholder logic or just a color initial.
-    // Let's use DiceBear for "real" feel.
     const image = `https://api.dicebear.com/7.x/notionists/svg?seed=${userData.name}`;
 
-    const newUser = {
+    const newUser: StoredUser = {
       ...userData,
       id: crypto.randomUUID(),
       image,
       verified: false,
+      passwordHash: hash,
+      passwordSalt: salt,
     };
 
     users.push(newUser);
     localStorage.setItem("users", JSON.stringify(users));
 
-    const { password: _, ...safeUser } = newUser;
+    const { passwordHash: _, passwordSalt: __, ...safeUser } = newUser;
     setUser(safeUser);
     localStorage.setItem("currentUser", JSON.stringify(safeUser));
   };
@@ -192,8 +218,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userIndex !== -1) {
         users[userIndex] = { ...users[userIndex], ...updates };
       } else {
-        // If user not found (e.g. demo user), add them to the list
-        users.push(updatedUser);
+        // If user not found (e.g. demo user), add them to the list with placeholder credentials
+        // Since demo users don't need to be persisted with password, use empty hash/salt
+        const storedUserData: StoredUser = {
+          ...updatedUser,
+          passwordHash: "",
+          passwordSalt: "",
+        };
+        users.push(storedUserData);
       }
       localStorage.setItem("users", JSON.stringify(users));
 
@@ -221,7 +253,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user.email === "elena@finloop.com"
     ) {
       // Verify current password
-      if (currentPassword !== "demo123") {
+      const isCorrect =
+        user.email === "sarah@techflow.com"
+          ? await verifyPassword(
+              currentPassword,
+              "25952f708acea6a47fa51627cf386341c47a76d406e8d7d0413ce4afac72a27f",
+              "cfab91c2c7087830eb7be34d4273b7c2",
+            )
+          : await verifyPassword(
+              currentPassword,
+              "c6ffbc1ca62c4283a4c7e172acf8e40e055deaa01261e6e9fc8e7a9147c7014b",
+              "b225d90dd22f479c5b45f361a097e724",
+            );
+      if (!isCorrect) {
         throw new Error("Current password is incorrect");
       }
       // Demo users - we can't actually change their password in this demo
@@ -238,12 +282,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Verify current password
-    if (users[userIndex].password !== currentPassword) {
+    const isCorrect = await verifyPassword(
+      currentPassword,
+      users[userIndex].passwordHash,
+      users[userIndex].passwordSalt,
+    );
+    if (!isCorrect) {
       throw new Error("Current password is incorrect");
     }
 
-    // Update password
-    users[userIndex].password = newPassword;
+    // Hash and update new password
+    const { hash, salt } = await hashPassword(newPassword);
+    users[userIndex].passwordHash = hash;
+    users[userIndex].passwordSalt = salt;
     localStorage.setItem("users", JSON.stringify(users));
   };
 
