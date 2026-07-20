@@ -5,6 +5,7 @@ import { MentorshipHub } from "./MentorshipHub";
 import { RoleSelection } from "./RoleSelection";
 import { LearnerDashboard } from "./LearnerDashboard";
 import { MentorDashboard } from "./MentorDashboard";
+import { OnboardingWizard } from "./OnboardingWizard";
 import { ForumFeed } from "./ForumFeed";
 import { MentorProfile } from "./MentorProfile";
 import { Contact } from "./Contact";
@@ -25,204 +26,36 @@ import { SessionHistory } from "./SessionHistory";
 
 import { LandingPage } from "./LandingPage";
 import { ToastContainer } from "./components/ToastContainer";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
   return (
     <>
       <Routes>
-        <Route
-          path="/"
-          element={
-            <ErrorBoundary>
-              <LandingPage />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/about"
-          element={
-            <ErrorBoundary>
-              <About />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/login"
-          element={
-            <ErrorBoundary>
-              <Login />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <ErrorBoundary>
-              <Signup />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/role-selection"
-          element={
-            <ErrorBoundary>
-              <RoleSelection />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/learner-dashboard"
-          element={
-            <ErrorBoundary>
-              <LearnerDashboard />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/mentor-dashboard"
-          element={
-            <ErrorBoundary>
-              <MentorDashboard />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/session-history"
-          element={
-            <ErrorBoundary>
-              <SessionHistory />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/mentor/wallet"
-          element={
-            <ErrorBoundary>
-              <MentorWallet />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/mentorship-hub"
-          element={
-            <ErrorBoundary>
-              <MentorshipHub />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/mentor/:id"
-          element={
-            <ErrorBoundary>
-              <MentorProfile />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/medical-profile/:id"
-          element={
-            <ErrorBoundary>
-              <MedicalProfile />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/forum"
-          element={
-            <ErrorBoundary>
-              <ForumFeed />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ErrorBoundary>
-              <Settings />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <ErrorBoundary>
-              <Notifications />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/contact"
-          element={
-            <ErrorBoundary>
-              <Contact />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/messages"
-          element={
-            <ErrorBoundary>
-              <ChatLayout />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/learner/:id"
-          element={
-            <ErrorBoundary>
-              <LearnerProfile />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/medical"
-          element={
-            <ErrorBoundary>
-              <MedicalHub />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/doctors"
-          element={
-            <ErrorBoundary>
-              <DoctorsDirectory />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/medical-registration"
-          element={
-            <ErrorBoundary>
-              <MedicalRegistration />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/medical-login"
-          element={
-            <ErrorBoundary>
-              <MedicalLogin />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/medical-dashboard"
-          element={
-            <ErrorBoundary>
-              <MedicalDashboard />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="/my-consultations"
-          element={
-            <ErrorBoundary>
-              <PatientConsultations />
-            </ErrorBoundary>
-          }
-        />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/role-selection" element={<RoleSelection />} />
+        <Route path="/learner-dashboard" element={<LearnerDashboard />} />
+        <Route path="/mentor-dashboard" element={<MentorDashboard />} />
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="/session-history" element={<SessionHistory />} />
+        <Route path="/mentor/wallet" element={<MentorWallet />} />
+        <Route path="/mentorship-hub" element={<MentorshipHub />} />
+        <Route path="/mentor/:id" element={<MentorProfile />} />
+        <Route path="/medical-profile/:id" element={<MedicalProfile />} />
+        <Route path="/forum" element={<ForumFeed />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/messages" element={<ChatLayout />} />
+        <Route path="/learner/:id" element={<LearnerProfile />} />
+        <Route path="/medical" element={<MedicalHub />} />
+        <Route path="/doctors" element={<DoctorsDirectory />} />
+        <Route path="/medical-registration" element={<MedicalRegistration />} />
+        <Route path="/medical-login" element={<MedicalLogin />} />
+        <Route path="/medical-dashboard" element={<MedicalDashboard />} />
+        <Route path="/my-consultations" element={<PatientConsultations />} />
         {/* Redirect old hub route to learner dashboard */}
         <Route
           path="/hub"
