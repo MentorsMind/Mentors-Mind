@@ -1,31 +1,31 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Login } from './Login';
-import { Signup } from './Signup';
-import { MentorshipHub } from './MentorshipHub';
-import { RoleSelection } from './RoleSelection';
-import { LearnerDashboard } from './LearnerDashboard';
-import { MentorDashboard } from './MentorDashboard';
-import { ForumFeed } from './ForumFeed';
-import { MentorProfile } from './MentorProfile';
-import { Contact } from './Contact';
-import { Settings } from './Settings';
-import { ChatLayout } from './ChatLayout';
-import { LearnerProfile } from './LearnerProfile';
-import { MedicalHub } from './MedicalHub';
-import { About } from './About';
-import { MentorWallet } from './MentorWallet';
-import { Notifications } from './Notifications';
-import { MedicalRegistration } from './MedicalRegistration';
-import { MedicalDashboard } from './MedicalDashboard';
-import { MedicalLogin } from './MedicalLogin';
-import { PatientConsultations } from './PatientConsultations';
-import { MedicalProfile } from './MedicalProfile';
-import { DoctorsDirectory } from './DoctorsDirectory';
-import { SessionHistory } from './SessionHistory';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Login } from "./Login";
+import { Signup } from "./Signup";
+import { MentorshipHub } from "./MentorshipHub";
+import { RoleSelection } from "./RoleSelection";
+import { LearnerDashboard } from "./LearnerDashboard";
+import { MentorDashboard } from "./MentorDashboard";
+import { OnboardingWizard } from "./OnboardingWizard";
+import { ForumFeed } from "./ForumFeed";
+import { MentorProfile } from "./MentorProfile";
+import { Contact } from "./Contact";
+import { Settings } from "./Settings";
+import { ChatLayout } from "./ChatLayout";
+import { LearnerProfile } from "./LearnerProfile";
+import { MedicalHub } from "./MedicalHub";
+import { About } from "./About";
+import { MentorWallet } from "./MentorWallet";
+import { Notifications } from "./Notifications";
+import { MedicalRegistration } from "./MedicalRegistration";
+import { MedicalDashboard } from "./MedicalDashboard";
+import { MedicalLogin } from "./MedicalLogin";
+import { PatientConsultations } from "./PatientConsultations";
+import { MedicalProfile } from "./MedicalProfile";
+import { DoctorsDirectory } from "./DoctorsDirectory";
+import { SessionHistory } from "./SessionHistory";
 
-import { LandingPage } from './LandingPage';
-import { AdminPanel } from './AdminPanel';
-import { ToastContainer } from './components/ToastContainer';
+import { LandingPage } from "./LandingPage";
+import { ToastContainer } from "./components/ToastContainer";
 
 function App() {
   return (
@@ -38,6 +38,7 @@ function App() {
         <Route path="/role-selection" element={<RoleSelection />} />
         <Route path="/learner-dashboard" element={<LearnerDashboard />} />
         <Route path="/mentor-dashboard" element={<MentorDashboard />} />
+        <Route path="/onboarding" element={<OnboardingWizard />} />
         <Route path="/session-history" element={<SessionHistory />} />
         <Route path="/mentor/wallet" element={<MentorWallet />} />
         <Route path="/mentorship-hub" element={<MentorshipHub />} />
@@ -57,7 +58,10 @@ function App() {
         <Route path="/my-consultations" element={<PatientConsultations />} />
         <Route path="/admin" element={<AdminPanel />} />
         {/* Redirect old hub route to learner dashboard */}
-        <Route path="/hub" element={<Navigate to="/learner-dashboard" replace />} />
+        <Route
+          path="/hub"
+          element={<Navigate to="/learner-dashboard" replace />}
+        />
         {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
