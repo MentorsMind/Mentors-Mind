@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Wallet, 
   TrendingUp, 
@@ -11,14 +11,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
-  Filter,
   Search,
   ChevronDown,
   Loader2
 } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
+import { DataTable, type Column } from './components/DataTable';
 import { useAuth } from './contexts/AuthContext';
-import { useWallet } from './contexts/WalletContext';
+import { useWallet, type Transaction } from './contexts/WalletContext';
 import { useNavigate } from 'react-router-dom';
 import { paystackApi, type Bank } from './lib/paystackBanks';
 
@@ -29,8 +29,10 @@ export function MentorWallet() {
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('10000');
-  const [filter, setFilter] = useState<'all' | 'successful' | 'pending' | 'failed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'successful' | 'failed' | 'refunded'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [banks, setBanks] = useState<Bank[]>([]);
   const [banksLoading, setBanksLoading] = useState(false);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
@@ -128,9 +130,9 @@ export function MentorWallet() {
     
     try {
       await requestPayout(amount, {
-        bankName: selectedBank?.name,
+        bankName: selectedBank?.name ?? '',
         accountNumber,
-        accountName
+        accountName: accountName ?? ''
       });
       setShowConfirmationModal(false);
       setShowPayoutModal(false);
@@ -145,12 +147,26 @@ export function MentorWallet() {
     }
   };
 
-  const filteredTransactions = getTransactionHistory().filter(tx => {
-    const matchesFilter = filter === 'all' || tx.status === filter;
-    const matchesSearch = tx.learnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tx.reference.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const transactionHistory = useMemo(() => getTransactionHistory(), [getTransactionHistory]);
+
+  const filteredTransactions = useMemo(() => {
+    return transactionHistory.filter((tx) => {
+      const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
+      const search = searchQuery.trim().toLowerCase();
+      const matchesSearch = !search || [tx.learnerName, tx.reference, tx.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(search);
+
+      const txDate = new Date(tx.date);
+      const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+      const toDate = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
+      const matchesFrom = !fromDate || txDate >= fromDate;
+      const matchesTo = !toDate || txDate <= toDate;
+
+      return matchesStatus && matchesSearch && matchesFrom && matchesTo;
+    });
+  }, [dateFrom, dateTo, getTransactionHistory, searchQuery, statusFilter, transactionHistory]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -163,6 +179,31 @@ export function MentorWallet() {
 
   const formatCurrency = (amount: number) => {
     return `₦${amount.toLocaleString()}`;
+  };
+
+  const exportTransactions = () => {
+    const header = ['Date', 'Learner', 'Reference', 'Amount', 'Platform Fee', 'Your Earnings', 'Status'];
+    const rows = filteredTransactions.map((tx) => [
+      formatDate(tx.date),
+      tx.learnerName,
+      tx.reference,
+      formatCurrency(tx.totalAmount),
+      formatCurrency(tx.platformFee),
+      formatCurrency(tx.mentorEarnings),
+      tx.status
+    ]);
+
+    const csvContent = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'mentor-wallet-transactions.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const getStatusColor = (status: string) => {
@@ -197,6 +238,97 @@ export function MentorWallet() {
     }
   };
 
+  const transactionColumns: Column<Transaction>[] = [
+    {
+      key: 'date',
+      header: 'Date',
+      sortable: true,
+      sortValue: (tx) => new Date(tx.date).getTime(),
+      width: '170px',
+      mode: 'fixed',
+      render: (value) => (
+        <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          {formatDate(String(value))}
+        </div>
+      )
+    },
+    {
+      key: 'learnerName',
+      header: 'Learner',
+      filterable: true,
+      width: '220px',
+      mode: 'fixed',
+      render: (_value, tx) => (
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${tx.learnerImage}')` }} />
+          <span className="text-sm font-semibold text-gray-900 dark:text-white">{tx.learnerName}</span>
+        </div>
+      )
+    },
+    {
+      key: 'reference',
+      header: 'Reference',
+      filterable: true,
+      width: '190px',
+      mode: 'fixed',
+      render: (value) => (
+        <code className="rounded bg-gray-100 px-2 py-1 text-xs font-mono text-gray-600 dark:bg-white/5 dark:text-gray-400">
+          {String(value)}
+        </code>
+      )
+    },
+    {
+      key: 'totalAmount',
+      header: 'Amount',
+      sortable: true,
+      sortValue: (tx) => tx.totalAmount,
+      width: '140px',
+      mode: 'fixed',
+      render: (value) => <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(Number(value))}</span>
+    },
+    {
+      key: 'platformFee',
+      header: 'Platform Fee',
+      width: '140px',
+      mode: 'fixed',
+      render: (value) => <span className="text-sm font-medium text-red-600 dark:text-red-400">-{formatCurrency(Number(value))}</span>
+    },
+    {
+      key: 'mentorEarnings',
+      header: 'Your Earnings',
+      width: '150px',
+      mode: 'fixed',
+      render: (value) => <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(Number(value))}</span>
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      filterable: true,
+      filterOptions: [
+        { label: 'All', value: '' },
+        { label: 'Successful', value: 'successful' },
+        { label: 'Failed', value: 'failed' },
+        { label: 'Refunded', value: 'refunded' }
+      ],
+      width: '140px',
+      mode: 'fixed',
+      render: (value) => (
+        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(String(value))}`}>
+          {getStatusIcon(String(value))}
+          {String(value)}
+        </span>
+      )
+    }
+  ];
+
+  const statusOptions: Array<{ label: string; value: 'all' | 'successful' | 'failed' | 'refunded' }> = [
+    { label: 'All', value: 'all' },
+    { label: 'Successful', value: 'successful' },
+    { label: 'Failed', value: 'failed' },
+    { label: 'Refunded', value: 'refunded' }
+  ];
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6 pb-24 md:pb-6">
@@ -218,7 +350,7 @@ export function MentorWallet() {
             <button
               onClick={() => setShowPayoutModal(true)}
               disabled={loading || wallet.balance < 10000}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Download className="w-5 h-5" />
               Request Payout
@@ -229,7 +361,7 @@ export function MentorWallet() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Available Balance */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="relative overflow-hidden bg-linear-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
@@ -284,108 +416,86 @@ export function MentorWallet() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Transaction History</h2>
               
               {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search */}
-                <div className="relative flex-1 sm:flex-none">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search transactions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full sm:w-64 pl-10 pr-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  />
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+                <div className="flex flex-wrap gap-2">
+                  {statusOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStatusFilter(option.value)}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${statusFilter === option.value ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10'}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Status Filter */}
-                <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                  <select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value as 'all' | 'successful' | 'pending' | 'failed')}
-                    className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="successful">Successful</option>
-                    <option value="pending">Pending</option>
-                    <option value="failed">Failed</option>
-                  </select>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-white/5 dark:text-gray-200">
+                    <span className="text-xs font-semibold uppercase tracking-wide">From</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(event) => setDateFrom(event.target.value)}
+                      className="bg-transparent outline-none"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-white/5 dark:text-gray-200">
+                    <span className="text-xs font-semibold uppercase tracking-wide">To</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(event) => setDateTo(event.target.value)}
+                      className="bg-transparent outline-none"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Transactions Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-800">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Learner</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reference</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Platform Fee</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Your Earnings</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          {formatDate(tx.date)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-cover bg-center" style={{ backgroundImage: `url('${tx.learnerImage}')` }}></div>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">{tx.learnerName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <code className="text-xs font-mono text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-1 rounded">
-                          {tx.reference}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(tx.totalAmount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400 font-medium">
-                        -{formatCurrency(tx.platformFee)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                        +{formatCurrency(tx.mentorEarnings)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(tx.status)}`}>
-                          {getStatusIcon(tx.status)}
-                          {tx.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
-                          <DollarSign className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No transactions found</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {searchQuery ? 'Try adjusting your search or filters' : 'Your transactions will appear here'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="border-b border-gray-100 p-4 dark:border-gray-800">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search transactions..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 dark:border-gray-700 dark:bg-white/5"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={exportTransactions}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-all hover:bg-emerald-100 dark:border-emerald-500/20 dark:bg-emerald-900/20 dark:text-emerald-300"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-6">
+            <DataTable
+              columns={transactionColumns}
+              data={filteredTransactions}
+              className="w-full"
+              emptyState={
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5">
+                    <DollarSign className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">No transactions found</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {searchQuery || dateFrom || dateTo ? 'Try adjusting your search or filters' : 'Your transactions will appear here'}
+                    </p>
+                  </div>
+                </div>
+              }
+            />
           </div>
         </div>
 
@@ -446,7 +556,7 @@ export function MentorWallet() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-emerald-500 to-emerald-600">
+              <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-emerald-500 to-emerald-600">
                 <button
                   onClick={() => setShowPayoutModal(false)}
                   className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/20 transition-colors"
@@ -644,7 +754,7 @@ export function MentorWallet() {
                       !accountName || 
                       parseFloat(payoutAmount) > wallet.balance
                     }
-                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 py-3 rounded-xl bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Continue
                   </button>
@@ -659,7 +769,7 @@ export function MentorWallet() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-[#1a2e22] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
               {/* Header */}
-              <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-emerald-500 to-emerald-600">
+              <div className="relative p-6 border-b border-gray-100 dark:border-gray-800 bg-linear-to-r from-emerald-500 to-emerald-600">
                 <button
                   onClick={() => setShowConfirmationModal(false)}
                   className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/20 transition-colors"
@@ -721,7 +831,7 @@ export function MentorWallet() {
                   <button
                     onClick={handleConfirmPayout}
                     disabled={loading}
-                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 py-3 rounded-xl bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {loading ? 'Processing...' : 'Confirm Payout'}
                   </button>
