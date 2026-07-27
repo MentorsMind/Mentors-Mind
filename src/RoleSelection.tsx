@@ -33,6 +33,18 @@ export function RoleSelection() {
         ...userData,
         role: selectedRole,
         category: selectedRole === "mentor" ? selectedCategory : undefined,
+        // Resolve referral code to referrer's user ID
+        referredBy: userData.refCode
+          ? (() => {
+              const allUsers: { id: string; referralCode?: string }[] = JSON.parse(
+                localStorage.getItem("users") || "[]"
+              );
+              const referrer = allUsers.find(
+                (u) => u.referralCode === userData.refCode
+              );
+              return referrer?.id;
+            })()
+          : undefined,
       });
 
       if (selectedRole === "learner") {
