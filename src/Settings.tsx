@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, Save, Loader2, RefreshCw, User, Lock, Bell, Moon, LogOut, Plus, Trash2, Video, AlertTriangle, ShieldAlert, XCircle } from 'lucide-react';
+import { Camera, Save, Loader2, RefreshCw, User, Lock, Bell, Moon, LogOut, Plus, Trash2, Video, AlertTriangle, ShieldAlert, XCircle, Gift } from 'lucide-react';
 import { AppLayout } from './components/AppLayout';
 import { useAuth, type NotificationPreferences } from './contexts/AuthContext';
 import { requestNotificationPermission, getNotificationPermission } from './lib/pushNotifications';
+import { ReferralSection } from './components/ReferralSection';
 
 export function Settings() {
   const { user, updateUser, logout, changePassword } = useAuth();
@@ -26,7 +27,7 @@ export function Settings() {
   const [newSpecName, setNewSpecName] = useState('');
   const [newSpecPrice, setNewSpecPrice] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'expertise'>('details');
-  const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'security' | 'appearance' | 'danger'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'security' | 'appearance' | 'referral' | 'danger'>('profile');
   
   // Default notification preferences
   const defaultPrefs: NotificationPreferences = {
@@ -221,25 +222,36 @@ export function Settings() {
               <Lock className="w-5 h-5" />
               <span>Security</span>
             </button>
-             <button 
-               onClick={() => setActiveSection('appearance')}
-               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                 activeSection === 'appearance'
-                   ? 'bg-white dark:bg-[#1a2e22] text-primary border border-primary/20 shadow-sm'
-                   : 'hover:bg-white dark:hover:bg-[#1a2e22] text-gray-600 dark:text-gray-400 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
-               }`}
-             >
+            <button 
+              onClick={() => setActiveSection('appearance')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                activeSection === 'appearance'
+                  ? 'bg-white dark:bg-[#1a2e22] text-primary border border-primary/20 shadow-sm'
+                  : 'hover:bg-white dark:hover:bg-[#1a2e22] text-gray-600 dark:text-gray-400 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
+              }`}
+            >
               <Moon className="w-5 h-5" />
               <span>Appearance</span>
             </button>
-             <button 
-               onClick={() => setActiveSection('danger')}
-               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                 activeSection === 'danger'
-                   ? 'bg-white dark:bg-[#1a2e22] text-red-600 border border-red-200 shadow-sm'
-                   : 'hover:bg-white dark:hover:bg-[#1a2e22] text-gray-600 dark:text-gray-400 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
-               }`}
-             >
+            <button 
+              onClick={() => setActiveSection('referral')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                activeSection === 'referral'
+                  ? 'bg-white dark:bg-[#1a2e22] text-primary border border-primary/20 shadow-sm'
+                  : 'hover:bg-white dark:hover:bg-[#1a2e22] text-gray-600 dark:text-gray-400 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
+              }`}
+            >
+              <Gift className="w-5 h-5" />
+              <span>Referral</span>
+            </button>
+            <button 
+              onClick={() => setActiveSection('danger')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                activeSection === 'danger'
+                  ? 'bg-white dark:bg-[#1a2e22] text-red-600 border border-red-200 shadow-sm'
+                  : 'hover:bg-white dark:hover:bg-[#1a2e22] text-gray-600 dark:text-gray-400 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
+              }`}
+            >
               <ShieldAlert className="w-5 h-5" />
               <span>Danger Zone</span>
             </button>
@@ -574,6 +586,19 @@ export function Settings() {
 
                     <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30">
                       <p className="text-sm text-blue-800 dark:text-blue-300">
+                        <strong>Note:</strong> Theme preferences are saved to your browser. You can also use your system's theme preference.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Referral Section */}
+              {activeSection === 'referral' && (
+                <div className="p-6 md:p-8">
+                  <ReferralSection />
+                </div>
+              )}="text-sm text-blue-800 dark:text-blue-300">
                         <strong>Note:</strong> Theme preferences are saved to your browser. You can also use your system's theme preference.
                       </p>
                     </div>
