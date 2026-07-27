@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Check, Sparkles } from 'lucide-react';
 import logo from './assets/logo.png';
 import { PasswordStrength } from './components/PasswordStrength';
@@ -13,6 +13,9 @@ export function Signup() {
   const [errors, setErrors] = useState({ name: '', email: '', password: '' });
   const [showConfetti, setShowConfetti] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Capture referral code from URL (?ref=CODE)
+  const refCode = searchParams.get('ref') || '';
 
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,7 +38,7 @@ export function Signup() {
     if (!newErrors.name && !newErrors.email && !newErrors.password) {
       setShowConfetti(true);
       setTimeout(() => {
-        navigate('/role-selection', { state: formData });
+        navigate('/role-selection', { state: { ...formData, refCode } });
       }, 1500);
     }
   };

@@ -19,6 +19,12 @@ export interface NotificationPreferences {
   pushEnabled: boolean;
 }
 
+export interface ReferralReward {
+  userId: string;
+  sessionId: string;
+  rewardedAt: string; // ISO date string
+}
+
 export interface User {
   id: string;
   name: string;
@@ -44,6 +50,10 @@ export interface User {
   learningGoals?: LearningGoal[];
   notificationPreferences?: NotificationPreferences;
   onboardingCompleted?: boolean;
+  // Referral system
+  referralCode?: string;
+  referredBy?: string; // referrer's user ID
+  referralRewards?: ReferralReward[];
 }
 
 interface AuthContextType {
@@ -174,13 +184,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Generate a random avatar if none provided (using DiceBear or placeholder)
     const image = `https://api.dicebear.com/7.x/notionists/svg?seed=${userData.name}`;
 
-    const newUser: StoredUser = {
+    // Generate unique referral code: 8 uppercase alphanumeric chars
+    const generateReferralCode = () =>
+      Math.random().toString(36).substring(2, 6).toUpperCase() +
+      Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    let referralCode = generateReferralCode();
+    // Ensure uniqueness
+    while (users.some((u: StoredUser) => u.referralCode === referralCode)) {
+      referralCode = generateReferralCode();
+    }
+
+    const newUser = {
       ...userData,
       id: crypto.randomUUID(),
       image,
       verified: false,
-      passwordHash: hash,
-      passwordSalt: salt,
+      referralCode,
+      referralRewards: [],
     };
 
     users.push(newUser);

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth, type ReferralReward } from './AuthContext';
 
 import { useNotifications } from './NotificationContext';
 
@@ -113,6 +113,60 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
             `Your session with ${senderName} has been ${status}.`,
             dashboardLink
         );
+
+        // Referral reward logic: if status is 'completed' and this is the learner's first session
+        if (status === 'completed' && sessionToUpdate.learnerId) {
+            const allUsers: (Record<string, unknown> & {
+                id: string;
+                referredBy?: string;
+                referralRewards?: ReferralReward[];
+            })[] = JSON.parse(localStorage.getItem('users') || '[]');
+
+            const learner = allUsers.find((u) => u.id === sessionToUpdate.learnerId);
+            const learnerSessions = sessions.filter((s) => s.learnerId === sessionToUpdate.learnerId);
+
+            // Check if this is their first completed session
+            const completedSessions = learnerSessions.filter((s) => s.status === 'completed');
+            const isFirstSession = completedSessions.length === 1; // Just became 1
+
+            if (isFirstSession && learner?.referredBy) {
+                const referrerId = learner.referredBy;
+                const referrerIndex = allUsers.findIndex((u) => u.id === referrerId);
+
+                if (referrerIndex !== -1) {
+                    const existingRewards: ReferralReward[] =
+                        allUsers[referrerIndex].referralRewards ?? [];
+
+                    // Idempotency: don't double-credit for the same session
+                    if (!existingRewards.some((r) => r.sessionId === sessionId)) {
+                        const newReward: ReferralReward = {
+                            userId: referrerId,
+                            sessionId,
+                            rewardedAt: new Date().toISOString(),
+                        };
+
+                        const updatedRewards = [...existingRewards, newReward];
+                        allUsers[referrerIndex] = {
+                            ...allUsers[referrerIndex],
+                            referralRewards: updatedRewards,
+                        };
+                        localStorage.setItem('users', JSON.stringify(allUsers));
+
+                        // If referrer is currently logged in, sync context
+                        if (user.id === referrerId) {
+                            // Trigger a context update (requires updateUser from AuthContext)
+                            // Since we don't have direct access to updateUser here, we just update localStorage
+                            // The user will see the reward on next page load or Settings navigation
+                            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                            if (currentUser.id === referrerId) {
+                                currentUser.referralRewards = updatedRewards;
+                                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
   };
 
