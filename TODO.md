@@ -1,39 +1,20 @@
-# Route Guards Implementation TODO
+# Optimistic Update Pattern Implementation
 
 ## Steps
 
-- [x] Plan approved
-- [x] 1. Fix `src/components/guards/ProtectedRoute.tsx` — Handle medical role type properly
-- [x] 2. Update `src/App.tsx` — Wrap routes with ProtectedRoute and MedicalGuard
-- [x] 3. Update `src/Login.tsx` — Add `location.state.from` post-login redirect
+- [x] 1. Create plan and get approval
+- [ ] 2. Create `.env` file with `VITE_BOOKING_FAILURE_RATE=0.1`
+- [ ] 3. Update `BookingContext.tsx`:
+  - [ ] Add `'optimistic'` to Session.status union
+  - [ ] Import `useTransition` and `useRef` from React
+  - [ ] Import `showToast` from `lib/toast`
+  - [ ] Implement optimistic add with snapshot-based rollback
+  - [ ] Use `startTransition` for non-urgent status resolution
+  - [ ] Add 10% failure rate using `VITE_BOOKING_FAILURE_RATE`
+  - [ ] Expose `rollbackBooking` function
+- [ ] 4. Update `BookingModal.tsx`:
+  - [ ] Remove local `loading`/`success` state management
+  - [ ] Close modal immediately after optimistic submit
+  - [ ] Let context handle toast/rollback on failure
+- [ ] 5. Done!
 
-## Completed Changes
-
-### `src/components/guards/ProtectedRoute.tsx`
-
-- Cast `user.role` to string at runtime to support `'medical'` role (set directly via localStorage by `MedicalLogin.tsx`)
-- Rest of existing logic preserved (redirect unauthenticated → `/login` with `state.from`, role mismatch → role-appropriate dashboard)
-
-### `src/App.tsx`
-
-- Imported `ProtectedRoute` and `MedicalGuard`
-- Wrapped public/guest-only routes (separated at top): `/`, `/about`, `/login`, `/signup`, `/role-selection`, `/medical`, `/doctors`, `/medical-registration`, `/medical-login`, `/medical-profile/:id`, `/mentor/:id`, `/learner/:id`, `/contact`
-- Wrapped general authenticated routes with `<ProtectedRoute>`: `/session-history`, `/mentorship-hub`, `/forum`, `/settings`, `/notifications`, `/messages`
-- Wrapped mentor-only routes with `<ProtectedRoute requiredRole="mentor">`: `/mentor-dashboard`, `/onboarding`, `/mentor/wallet`
-- Wrapped learner-only route with `<ProtectedRoute requiredRole="learner">`: `/learner-dashboard`
-- Wrapped medical-only routes with `<MedicalGuard>`: `/medical-dashboard`, `/my-consultations`
-
-### `src/Login.tsx`
-
-- Added `useLocation` import
-- Read `from` from `location.state.from` (set by ProtectedRoute/MedicalGuard on redirect)
-- After successful login: if `from` exists and isn't `/login` or `/signup`, redirect to `from`; otherwise fallback to role-appropriate dashboard
-- Used `{ replace: true }` to prevent back-button loop to login page
-
-### `src/components/guards/MedicalGuard.tsx`
-
-- No changes needed — already correct:
-  - Reads `currentUser` from localStorage
-  - Checks against `medicalProfessionals` localStorage store
-  - Redirects to `/medical-registration` if not found
-  - Passes `location.state.from` for post-login redirect
