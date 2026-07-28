@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { hashPassword, verifyPassword } from "../lib/crypto";
+import { navigateTo } from "../lib/router";
 
 export interface LearningGoal {
   id: string;
@@ -215,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("currentUser");
-    window.location.href = "/login"; // Hard redirect to clear any state if needed
+    navigateTo("/login", { replace: true });
   };
 
   const updateUser = async (updates: Partial<User>) => {
