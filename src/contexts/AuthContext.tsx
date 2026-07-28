@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { hashPassword, verifyPassword } from "../lib/crypto";
-import { navigateTo } from "../lib/router";
+import { get, getSync, remove, set } from "../lib/storage";
+import { STORAGE_KEYS } from "../lib/storageKeys";
 
 export interface LearningGoal {
   id: string;
@@ -78,7 +79,7 @@ interface StoredUser extends User {
 }
 
 function loadUsers(): StoredUser[] {
-  return JSON.parse(localStorage.getItem("users") || "[]");
+  return getSync<StoredUser[]>(STORAGE_KEYS.USERS) ?? [];
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -86,24 +87,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load persisted user on mount
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user", e);
+    const initializeAuth = async () => {
+      const storedUser = await get<User>(STORAGE_KEYS.CURRENT_USER);
+      if (storedUser) {
+        setUser(storedUser);
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    void initializeAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Hardcoded Demo Users with hashed credentials
-    // sarah@techflow.com / demo123
     if (
       email === "sarah@techflow.com" &&
       (await verifyPassword(
@@ -125,12 +122,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           { name: "UI/UX Design", price: 45 },
         ],
       };
-      localStorage.setItem("currentUser", JSON.stringify(demoUser));
+      await set(STORAGE_KEYS.CURRENT_USER, demoUser);
       setUser(demoUser);
       return true;
     }
 
-    // elena@finloop.com / demo123
     if (
       email === "elena@finloop.com" &&
       (await verifyPassword(
@@ -148,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100&h=100",
         category: "Business",
       };
-      localStorage.setItem("currentUser", JSON.stringify(demoUser));
+      await set(STORAGE_KEYS.CURRENT_USER, demoUser);
       setUser(demoUser);
       return true;
     }
@@ -166,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ) {
       const { passwordHash: _, passwordSalt: __, ...safeUser } = foundUser;
       setUser(safeUser);
-      localStorage.setItem("currentUser", JSON.stringify(safeUser));
+      await set(STORAGE_KEYS.CURRENT_USER, safeUser);
       return true;
     }
     return false;
@@ -177,21 +173,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    const users = loadUsers();
 
-    // Hash the password before storing
-    const { hash, salt } = await hashPassword(userData.password);
+    const { hash: _, salt: __ } = await hashPassword(userData.password);
 
-    // Generate a random avatar if none provided (using DiceBear or placeholder)
     const image = `https://api.dicebear.com/7.x/notionists/svg?seed=${userData.name}`;
 
-    // Generate unique referral code: 8 uppercase alphanumeric chars
     const generateReferralCode = () =>
       Math.random().toString(36).substring(2, 6).toUpperCase() +
       Math.random().toString(36).substring(2, 6).toUpperCase();
 
     let referralCode = generateReferralCode();
-    // Ensure uniqueness
     while (users.some((u: StoredUser) => u.referralCode === referralCode)) {
       referralCode = generateReferralCode();
     }
@@ -206,42 +198,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
+    await set(STORAGE_KEYS.USERS, users);
 
     const { passwordHash: _, passwordSalt: __, ...safeUser } = newUser;
     setUser(safeUser);
-    localStorage.setItem("currentUser", JSON.stringify(safeUser));
+    await set(STORAGE_KEYS.CURRENT_USER, safeUser);
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("currentUser");
-    navigateTo("/login", { replace: true });
+    void remove(STORAGE_KEYS.CURRENT_USER);
+    window.location.href = "/login";
   };
 
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return;
 
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Mock network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
       const updatedUser = { ...user, ...updates };
 
-      // Try saving to localStorage first to ensure capacity
-      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      await set(STORAGE_KEYS.CURRENT_USER, updatedUser);
 
-      // Also update in the main 'users' list
       const users = loadUsers();
       const userIndex = users.findIndex((u) => u.email === user.email);
 
-      // If user exists in DB, update them. If not (managed/demo user), we might skip or add them.
-      // For persistence of Demo users across relogin, we should probably upsert?
-      // For now, standard behavior.
       if (userIndex !== -1) {
         users[userIndex] = { ...users[userIndex], ...updates };
       } else {
-        // If user not found (e.g. demo user), add them to the list with placeholder credentials
-        // Since demo users don't need to be persisted with password, use empty hash/salt
         const storedUserData: StoredUser = {
           ...updatedUser,
           passwordHash: "",
@@ -249,9 +234,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         users.push(storedUserData);
       }
-      localStorage.setItem("users", JSON.stringify(users));
+      await set(STORAGE_KEYS.USERS, users);
 
-      // Only update state if storage succeeded
       setUser(updatedUser);
     } catch (error) {
       console.error("Storage operation failed", error);
@@ -267,35 +251,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     if (!user) throw new Error("No user logged in");
 
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Mock network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // For demo users (hardcoded)
     if (
       user.email === "sarah@techflow.com" ||
       user.email === "elena@finloop.com"
     ) {
-      // Verify current password
       const isCorrect =
         user.email === "sarah@techflow.com"
           ? await verifyPassword(
-              currentPassword,
-              "25952f708acea6a47fa51627cf386341c47a76d406e8d7d0413ce4afac72a27f",
-              "cfab91c2c7087830eb7be34d4273b7c2",
-            )
+            currentPassword,
+            "25952f708acea6a47fa51627cf386341c47a76d406e8d7d0413ce4afac72a27f",
+            "cfab91c2c7087830eb7be34d4273b7c2",
+          )
           : await verifyPassword(
-              currentPassword,
-              "c6ffbc1ca62c4283a4c7e172acf8e40e055deaa01261e6e9fc8e7a9147c7014b",
-              "b225d90dd22f479c5b45f361a097e724",
-            );
+            currentPassword,
+            "c6ffbc1ca62c4283a4c7e172acf8e40e055deaa01261e6e9fc8e7a9147c7014b",
+            "b225d90dd22f479c5b45f361a097e724",
+          );
       if (!isCorrect) {
         throw new Error("Current password is incorrect");
       }
-      // Demo users - we can't actually change their password in this demo
-      // But we'll pretend it worked
       return;
     }
 
-    // For regular users stored in localStorage
     const users = loadUsers();
     const userIndex = users.findIndex((u) => u.email === user.email);
 
@@ -303,7 +282,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("User not found");
     }
 
-    // Verify current password
     const isCorrect = await verifyPassword(
       currentPassword,
       users[userIndex].passwordHash,
@@ -313,11 +291,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Current password is incorrect");
     }
 
-    // Hash and update new password
     const { hash, salt } = await hashPassword(newPassword);
     users[userIndex].passwordHash = hash;
     users[userIndex].passwordSalt = salt;
-    localStorage.setItem("users", JSON.stringify(users));
+    await set(STORAGE_KEYS.USERS, users);
   };
 
   return (

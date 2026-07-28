@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth, type User } from './AuthContext';
 import { sendBrowserNotification } from '../lib/pushNotifications';
+import { get, set } from '../lib/storage';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 export interface Notification {
   id: string;
@@ -40,55 +42,56 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Load notifications
   useEffect(() => {
-    const stored = localStorage.getItem('notifications');
-    if (stored) {
-      setNotifications(JSON.parse(stored));
-    } else if (user) {
-      // Add demo notifications for new users
-      const demoNotifications: Notification[] = [
-        {
-          id: crypto.randomUUID(),
-          userId: user.id,
-          type: 'system',
-          title: 'Welcome to MentorMinds! 🎉',
-          message: 'Your account has been successfully created. Start exploring mentors and book your first session!',
-          link: '/mentorship-hub',
-          read: false,
-          timestamp: new Date().toISOString()
-        },
-        {
-          id: crypto.randomUUID(),
-          userId: user.id,
-          type: 'booking',
-          title: 'Complete Your Profile',
-          message: 'Add more details to your profile to help mentors understand your goals better.',
-          link: '/settings',
-          read: false,
-          timestamp: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
-        },
-        {
-          id: crypto.randomUUID(),
-          userId: user.id,
-          type: 'message',
-          title: 'New Feature: Wallet System',
-          message: user.role === 'mentor' 
-            ? 'Track your earnings and request payouts from your new wallet dashboard!' 
-            : 'You can now view your booking history and manage payments easily.',
-          link: user.role === 'mentor' ? '/mentor/wallet' : '/learner-dashboard',
-          read: false,
-          timestamp: new Date(Date.now() - 7200000).toISOString() // 2 hours ago
-        }
-      ];
-      setNotifications(demoNotifications);
-    }
+    const loadNotifications = async () => {
+      const stored = await get<Notification[]>(STORAGE_KEYS.NOTIFICATIONS);
+      if (stored) {
+        setNotifications(stored);
+      } else if (user) {
+        const demoNotifications: Notification[] = [
+          {
+            id: crypto.randomUUID(),
+            userId: user.id,
+            type: 'system',
+            title: 'Welcome to MentorMinds! 🎉',
+            message: 'Your account has been successfully created. Start exploring mentors and book your first session!',
+            link: '/mentorship-hub',
+            read: false,
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: crypto.randomUUID(),
+            userId: user.id,
+            type: 'booking',
+            title: 'Complete Your Profile',
+            message: 'Add more details to your profile to help mentors understand your goals better.',
+            link: '/settings',
+            read: false,
+            timestamp: new Date(Date.now() - 3600000).toISOString()
+          },
+          {
+            id: crypto.randomUUID(),
+            userId: user.id,
+            type: 'message',
+            title: 'New Feature: Wallet System',
+            message: user.role === 'mentor' 
+              ? 'Track your earnings and request payouts from your new wallet dashboard!' 
+              : 'You can now view your booking history and manage payments easily.',
+            link: user.role === 'mentor' ? '/mentor/wallet' : '/learner-dashboard',
+            read: false,
+            timestamp: new Date(Date.now() - 7200000).toISOString()
+          }
+        ];
+        setNotifications(demoNotifications);
+      }
+    };
+
+    void loadNotifications();
   }, [user]);
 
-  // Save notifications
   useEffect(() => {
     if (notifications.length > 0) {
-      localStorage.setItem('notifications', JSON.stringify(notifications));
+      void set(STORAGE_KEYS.NOTIFICATIONS, notifications);
     }
   }, [notifications]);
 
@@ -101,14 +104,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const unreadCount = userNotifications.filter(n => !n.read).length;
 
   const addNotification = (userId: string, type: Notification['type'], title: string, message: string, link?: string) => {
-    // Get recipient user from localStorage
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const allUsers = (getSync<User[]>(STORAGE_KEYS.USERS) ?? []) as User[];
     const recipientUser = allUsers.find((u: User) => u.id === userId);
 
-    // Get recipient preferences
     const prefs = getUserPreferences(recipientUser);
 
-    // Check if notification type is enabled
     if (!prefs[type]) {
       return;
     }
@@ -125,7 +125,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
     setNotifications(prev => [newNotification, ...prev]);
 
-    // Send browser push notification if enabled
     if (prefs.pushEnabled) {
       sendBrowserNotification(title, message, recipientUser?.image);
     }

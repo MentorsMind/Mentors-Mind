@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
+import { get, remove, set } from '../lib/storage';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 export interface Message {
   id: string;
@@ -41,22 +43,26 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedThreads = localStorage.getItem('threads');
-    if (storedThreads) {
-        setThreads(JSON.parse(storedThreads));
-    }
+    const loadThreads = async () => {
+      const storedThreads = await get<Thread[]>(STORAGE_KEYS.THREADS);
+      if (storedThreads) {
+        setThreads(storedThreads);
+      }
+    };
+
+    void loadThreads();
   }, []);
 
   useEffect(() => {
     if (threads.length > 0) {
-        localStorage.setItem('threads', JSON.stringify(threads));
+      void set(STORAGE_KEYS.THREADS, threads);
     }
   }, [threads]);
 
   const markAsRead = (threadId: string) => {
     if (!user) return;
 
-    localStorage.setItem(`lastSeen_${user.id}`, Date.now().toString());
+    void set(`${STORAGE_KEYS.LAST_SEEN_PREFIX}${user.id}`, Date.now().toString());
 
     setThreads(prev => prev.map(t => {
       if (t.id !== threadId) return t;
@@ -120,8 +126,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = (threadId: string, content: string) => {
     if (!user) return;
 
-    localStorage.setItem(`lastSeen_${user.id}`, Date.now().toString());
-    localStorage.removeItem(`typing_${threadId}_${user.id}`);
+    void set(`${STORAGE_KEYS.LAST_SEEN_PREFIX}${user.id}`, Date.now().toString());
+    void remove(`${STORAGE_KEYS.TYPING_PREFIX}${threadId}_${user.id}`);
 
     const newMessage: Message = {
         id: crypto.randomUUID(),
