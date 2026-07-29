@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Video,
   MessageSquare,
@@ -21,7 +22,7 @@ import { EditProfileModal } from "./components/EditProfileModal";
 
 export function MentorDashboard() {
   const { user, isAuthenticated } = useAuth();
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const navigate = useNavigate();
   const { getSessionsForUser } = useBooking();
   const { posts } = useForum();
   const sessions = user ? getSessionsForUser(user.id) : [];
@@ -57,12 +58,11 @@ export function MentorDashboard() {
       user?.role === "mentor" &&
       !user?.onboardingCompleted
     ) {
-      setIsRedirecting(true);
-      window.location.href = "/onboarding";
+      navigate("/onboarding", { replace: true });
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, navigate]);
 
-  if (isRedirecting) {
+  if (isAuthenticated && user?.role === "mentor" && !user?.onboardingCompleted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -118,7 +118,7 @@ export function MentorDashboard() {
             <div className="ml-auto md:hidden flex items-center gap-2">
               <NotificationDropdown />
               <button
-                onClick={() => (window.location.href = "/settings")}
+                onClick={() => navigate("/settings")}
                 className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400"
               >
                 <Settings className="w-5 h-5" />
@@ -264,7 +264,7 @@ export function MentorDashboard() {
               </h3>
               <div className="space-y-3">
                 <button
-                  onClick={() => (window.location.href = "/mentor/wallet")}
+                  onClick={() => navigate("/mentor/wallet")}
                   className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 hover:from-emerald-100 hover:to-blue-100 dark:hover:from-emerald-900/30 dark:hover:to-blue-900/30 border border-emerald-200 dark:border-emerald-800/30 transition-all group text-left"
                 >
                   <div className="flex items-center gap-3">

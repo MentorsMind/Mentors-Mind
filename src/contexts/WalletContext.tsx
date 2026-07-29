@@ -55,6 +55,7 @@ interface WalletContextType {
   payouts: Payout[];
   loading: boolean;
   requestPayout: (amount: number, bankDetails?: BankDetails) => Promise<void>;
+  createTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
   getTransactionHistory: () => Transaction[];
   getPayoutHistory: () => Payout[];
   refreshWallet: () => Promise<void>;
@@ -236,6 +237,35 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+    try {
+      const newTransaction: Transaction = {
+        ...transaction,
+        id: crypto.randomUUID()
+      };
+
+      const updatedTransactions = [newTransaction, ...transactions];
+      setTransactions(updatedTransactions);
+
+      // Update wallet if this is for the current user (mentor receiving payment)
+      if (user?.id === transaction.mentorId) {
+        const updatedWallet = {
+          ...wallet,
+          balance: wallet.balance + transaction.mentorEarnings,
+          totalEarned: wallet.totalEarned + transaction.mentorEarnings
+        };
+        setWallet(updatedWallet);
+        localStorage.setItem(`wallet_${user.id}`, JSON.stringify(updatedWallet));
+      }
+
+      // Persist transaction
+      localStorage.setItem(`transactions_${transaction.mentorId}`, JSON.stringify(updatedTransactions));
+    } catch (error) {
+      console.error('Failed to create transaction:', error);
+      throw error;
+    }
+  };
+
   const getTransactionHistory = () => {
     return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
@@ -262,6 +292,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         payouts,
         loading,
         requestPayout,
+        createTransaction,
         getTransactionHistory,
         getPayoutHistory,
         refreshWallet

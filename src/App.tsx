@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { NavigationSetter } from "./components/NavigationSetter";
 import { Login } from "./Login";
 import { Signup } from "./Signup";
 import { MentorshipHub } from "./MentorshipHub";
@@ -32,6 +33,8 @@ import { MedicalGuard } from "./components/guards/MedicalGuard";
 function App() {
   return (
     <>
+      {/* Registers the singleton navigate function for use outside components */}
+      <NavigationSetter />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/about" element={<About />} />
