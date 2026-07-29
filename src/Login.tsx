@@ -246,16 +246,26 @@ export function Login() {
                   <input
                     type="email"
                     name="email"
-                    value={formData.email}
+                    value={values.email}
                     onChange={handleChange}
                     placeholder="jane@startup.com"
                     required
+                    aria-describedby="login-email-error"
                     className="w-full bg-gray-50 dark:bg-[#1c2622] text-gray-900 dark:text-white placeholder:text-gray-400 border-2 border-gray-200 dark:border-[#3d524a] focus:border-emerald-500 dark:focus:border-emerald-500 rounded-xl h-14 px-4 outline-none transition-all duration-200 input-focus-glow"
                   />
-                  {formData.email && validateEmail(formData.email) && (
+                  {values.email && !getError("email") && (
                     <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
                   )}
                 </div>
+                {getError("email") && (
+                  <p
+                    id="login-email-error"
+                    className="text-red-500 text-xs mt-1"
+                    role="alert"
+                  >
+                    {getError("email")}
+                  </p>
+                )}
               </div>
 
               {/* Password Input */}
@@ -270,10 +280,11 @@ export function Login() {
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    value={formData.password}
+                    value={values.password}
                     onChange={handleChange}
                     placeholder="••••••••"
                     required
+                    aria-describedby="login-password-error"
                     className="w-full bg-gray-50 dark:bg-[#1c2622] text-gray-900 dark:text-white placeholder:text-gray-400 border-2 border-gray-200 dark:border-[#3d524a] focus:border-emerald-500 dark:focus:border-emerald-500 rounded-xl h-14 pl-4 pr-12 outline-none transition-all duration-200 input-focus-glow"
                   />
                   <button
@@ -288,6 +299,15 @@ export function Login() {
                     )}
                   </button>
                 </div>
+                {getError("password") && (
+                  <p
+                    id="login-password-error"
+                    className="text-red-500 text-xs mt-1"
+                    role="alert"
+                  >
+                    {getError("password")}
+                  </p>
+                )}
               </div>
 
               {/* Forgot Password */}
