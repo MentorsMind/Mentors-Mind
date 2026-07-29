@@ -9,9 +9,9 @@ export function SessionHistory() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getSessionsForUser } = useBooking();
-  
+
   const sessions = user ? getSessionsForUser(user.id) : [];
-  
+
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -26,7 +26,7 @@ export function SessionHistory() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <button 
+            <button
               onClick={() => navigate(-1)}
               className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white mb-2 transition-colors"
             >
@@ -35,21 +35,21 @@ export function SessionHistory() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Session History</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">Review all your past and upcoming mentorship sessions.</p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search mentors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-white dark:bg-[#0F1615] border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:text-white"
               />
             </div>
-            
+
             <div className="relative">
-              <select 
+              <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-white dark:bg-[#0F1615] border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer dark:text-white"
@@ -92,8 +92,8 @@ export function SessionHistory() {
                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           <span>
-                            {new Date(session.date).toLocaleDateString()} <br/>
-                            <span className="text-xs text-gray-500">{new Date(session.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            {new Date(session.date).toLocaleDateString()} <br />
+                            <span className="text-xs text-gray-500">{new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </span>
                         </div>
                       </td>
@@ -101,12 +101,12 @@ export function SessionHistory() {
                         {session.type || 'General Mentorship'}
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                          session.status === 'completed' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' :
-                          session.status === 'upcoming' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400' :
-                          'bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-500/10 dark:border-gray-500/20 dark:text-gray-400'
-                        }`}>
-                          {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${session.status === 'completed' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' :
+                            session.status === 'optimistic' ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 animate-pulse' :
+                              session.status === 'pending' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400' :
+                                'bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-500/10 dark:border-gray-500/20 dark:text-gray-400'
+                          }`}>
+                          {session.status === 'optimistic' ? 'Scheduling...' : session.status.charAt(0).toUpperCase() + session.status.slice(1)}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
@@ -130,7 +130,7 @@ export function SessionHistory() {
               <Calendar className="w-12 h-12 text-gray-300 mb-4" />
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No sessions found</h3>
               <p className="text-gray-500 max-w-md">You haven't booked any sessions yet, or none match your current filters.</p>
-              <button 
+              <button
                 onClick={() => navigate('/mentorship-hub')}
                 className="mt-6 px-6 py-2 bg-primary text-white font-bold rounded-xl hover:bg-green-600 transition-colors"
               >
