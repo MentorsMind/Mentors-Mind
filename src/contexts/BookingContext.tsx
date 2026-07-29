@@ -27,11 +27,13 @@ export interface Session {
   status: 'optimistic' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
   resources?: SessionResource[];
+  amount?: number; // Amount paid in Naira
+  paystackReference?: string; // Paystack transaction reference
 }
 
 interface BookingContextType {
   sessions: Session[];
-  bookSession: (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string) => Promise<void>;
+  bookSession: (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string, amount?: number, paystackReference?: string) => Promise<void>;
   updateSessionStatus: (sessionId: string, status: Session['status']) => void;
   getSessionsForUser: (userId: string) => Session[];
   addSessionResource: (sessionId: string, resource: Omit<SessionResource, 'id' | 'addedBy' | 'addedAt'>) => void;
@@ -68,7 +70,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [sessions, loading]);
 
-  const bookSession = async (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string) => {
+  const bookSession = async (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string, amount?: number, paystackReference?: string) => {
     if (!user) throw new Error("Must be logged in to book a session");
 
     const newSession: Session = {

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { X, MessageSquare, Loader2 } from 'lucide-react';
 import { useBooking } from '../contexts/BookingContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useWallet } from '../contexts/WalletContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { showToast } from '../lib/toast';
 
@@ -10,6 +12,7 @@ interface BookingModalProps {
   mentorId: string;
   mentorName: string;
   mentorImage: string;
+  mentorRate?: number; // Hourly rate in Naira
 }
 
 export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImage }: BookingModalProps) {
@@ -19,14 +22,49 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
 
   const modalRef = useFocusTrap(isOpen, onClose);
 
+  // Load Paystack SDK when modal opens
+  useEffect(() => {
+    if (isOpen && !paystackLoaded) {
+      loadPaystackScript()
+        .then(() => setPaystackLoaded(true))
+        .catch((err) => {
+          console.error('Failed to load Paystack:', err);
+          setError('Payment system unavailable. Please try again later.');
+        });
+    }
+  }, [isOpen, paystackLoaded]);
+
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleTopicSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      // Use a placeholder date - mentor will schedule the actual time
+      const paystackKey = getPaystackPublicKey();
+      const amountInKobo = formatAmountInKobo(mentorRate);
+
+      const response = await initiatePayment({
+        key: paystackKey,
+        email: user.email,
+        amount: amountInKobo,
+        firstname: user.name?.split(' ')[0],
+        lastname: user.name?.split(' ')[1] || '',
+        phone: user.phone,
+        metadata: {
+          mentorId,
+          mentorName,
+          topic,
+          userId: user.id
+        },
+        onClose: () => {
+          setLoading(false);
+          setError('Payment was cancelled');
+          setStep('topic');
+        }
+      });
+
+      // Payment successful - create booking and transaction
       const placeholderDate = new Date();
       // bookSession now optimistically adds the session and resolves asynchronously
       await bookSession(mentorId, mentorName, mentorImage, placeholderDate, topic);
@@ -64,15 +102,14 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
               <p className="font-bold text-gray-900 dark:text-white">{mentorName}</p>
             </div>
           </div>
-        </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl p-4">
-            <p className="text-sm text-blue-800 dark:text-blue-300">
-              <strong>Note:</strong> {mentorName} will review your request and schedule a convenient time for both of you.
-            </p>
-          </div>
+          {/* Payment Details */}
+          <div className="p-6 space-y-6">
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl p-4">
+                <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+              </div>
+            )}
 
           <div>
             <label htmlFor="topic-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -94,6 +131,10 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
               Be as detailed as possible to help {mentorName.split(' ')[0]} prepare for your session.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
 
           <button
             type="submit"
@@ -104,7 +145,9 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
           </button>
         </form>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
 
