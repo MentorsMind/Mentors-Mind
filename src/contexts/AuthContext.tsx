@@ -27,6 +27,13 @@ export interface ReferralReward {
   rewardedAt: string; // ISO date string
 }
 
+export interface AvailabilitySlot {
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 6 = Saturday
+  startHour: number;
+  endHour: number;
+  timezone: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -56,6 +63,9 @@ export interface User {
   referralCode?: string;
   referredBy?: string; // referrer's user ID
   referralRewards?: ReferralReward[];
+  // Availability management for mentors
+  availability?: AvailabilitySlot[];
+  timezone?: string;
 }
 
 interface AuthContextType {

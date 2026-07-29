@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useMentors } from './hooks/useData';
 import { useVirtualGrid } from './hooks/useVirtualGrid';
+import { useDebounce } from './hooks/useDebounce';
 import { AppLayout } from './components/AppLayout';
 import { BookingModal } from './components/BookingModal';
 import { useAuth } from './contexts/AuthContext';
@@ -22,6 +23,7 @@ export function MentorshipHub() {
   const [selectedMentor, setSelectedMentor] = useState<AnyMentor | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 250);
   const navigate = useNavigate();
   const { user } = useAuth();
   const mentors = useMentors();
@@ -29,9 +31,9 @@ export function MentorshipHub() {
 
   const filteredMentors = mentors.filter((mentor) => {
     const matchesCategory = filter === 'All' || mentor.category === filter;
-    const matchesSearch = mentor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          mentor.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          mentor.company.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = mentor.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) || 
+                          mentor.role.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+                          mentor.company.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
