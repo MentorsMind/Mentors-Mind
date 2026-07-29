@@ -11,6 +11,12 @@ import { MessageProvider } from './contexts/MessageContext'
 import { ForumProvider } from './contexts/ForumContext'
 import { NotificationProvider } from './contexts/NotificationContext'
 import { WalletProvider } from './contexts/WalletContext'
+import { loadPaystackScript } from './lib/paystack'
+
+// Load Paystack SDK once on app initialization
+loadPaystackScript().catch((err) => {
+  console.warn('Paystack SDK failed to load. Payments may be unavailable:', err);
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

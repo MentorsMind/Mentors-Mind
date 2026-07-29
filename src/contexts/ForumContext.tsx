@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
+import { get, set } from '../lib/storage';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 export interface Comment {
   id: string;
@@ -33,6 +35,7 @@ interface ForumContextType {
   createPost: (title: string, content: string, category: string) => void;
   addComment: (postId: string, content: string) => void;
   likePost: (postId: string) => boolean;
+  deletePost: (postId: string) => void;
   loading: boolean;
 }
 
@@ -89,24 +92,24 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
 
-  // Load posts
   useEffect(() => {
-    const storedPosts = localStorage.getItem('posts');
-    if (storedPosts) {
-      const parsed = JSON.parse(storedPosts) as Post[];
-      // Backfill likedBy for older stored posts that lack it
-      setPosts(parsed.map(p => ({ ...p, likedBy: p.likedBy || [] })));
-    } else {
-      setPosts(INITIAL_POSTS);
-    }
-    setLoading(false);
+    const loadPosts = async () => {
+      const storedPosts = await get<Post[]>(STORAGE_KEYS.POSTS);
+      if (storedPosts) {
+        setPosts(storedPosts.map(p => ({ ...p, likedBy: p.likedBy || [] })));
+      } else {
+        setPosts(INITIAL_POSTS);
+      }
+      setLoading(false);
+    };
+
+    void loadPosts();
   }, []);
 
-  // Debounced persistence to localStorage (300ms) to avoid thrashing on rapid clicks
   useEffect(() => {
     if (loading) return;
     const timer = setTimeout(() => {
-      localStorage.setItem('posts', JSON.stringify(posts));
+      void set(STORAGE_KEYS.POSTS, posts);
     }, 300);
     return () => clearTimeout(timer);
   }, [posts, loading]);
@@ -147,7 +150,6 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
 
     setPosts(prev => prev.map(post => {
       if (post.id === postId) {
-        // Notify post author if not self
         if (post.authorId !== user.id) {
             addNotification(
                 post.authorId,
@@ -192,6 +194,10 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const deletePost = (postId: string) => {
+    setPosts(prev => prev.filter(post => post.id !== postId));
+  };
+
   const searchPosts = (query: string) => {
     if (!query) return posts;
     const lowerQuery = query.toLowerCase();
@@ -203,7 +209,7 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ForumContext.Provider value={{ posts, searchPosts, createPost, addComment, likePost, loading }}>
+    <ForumContext.Provider value={{ posts, searchPosts, createPost, addComment, likePost, deletePost, loading }}>
       {children}
     </ForumContext.Provider>
   );

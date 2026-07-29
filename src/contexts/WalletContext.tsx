@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { get, set } from '../lib/storage';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 export interface BankDetails {
   bankName: string;
@@ -53,6 +55,7 @@ interface WalletContextType {
   payouts: Payout[];
   loading: boolean;
   requestPayout: (amount: number, bankDetails?: BankDetails) => Promise<void>;
+  createTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
   getTransactionHistory: () => Transaction[];
   getPayoutHistory: () => Payout[];
   refreshWallet: () => Promise<void>;
@@ -73,27 +76,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Load wallet data from localStorage
   useEffect(() => {
     if (user?.role === 'mentor') {
-      loadWalletData();
+      void loadWalletData();
     }
   }, [user]);
 
-  const loadWalletData = () => {
+  const loadWalletData = async () => {
     try {
-      const walletKey = `wallet_${user?.id}`;
-      const transactionsKey = `transactions_${user?.id}`;
-      const payoutsKey = `payouts_${user?.id}`;
+      const walletKey = `${STORAGE_KEYS.WALLET_PREFIX}${user?.id}`;
+      const transactionsKey = `${STORAGE_KEYS.TRANSACTIONS_PREFIX}${user?.id}`;
+      const payoutsKey = `${STORAGE_KEYS.PAYOUTS_PREFIX}${user?.id}`;
 
-      const storedWallet = localStorage.getItem(walletKey);
-      const storedTransactions = localStorage.getItem(transactionsKey);
-      const storedPayouts = localStorage.getItem(payoutsKey);
+      const storedWallet = await get<WalletData>(walletKey);
+      const storedTransactions = await get<Transaction[]>(transactionsKey);
+      const storedPayouts = await get<Payout[]>(payoutsKey);
 
       if (storedWallet) {
-        setWallet(JSON.parse(storedWallet));
+        setWallet(storedWallet);
       } else {
-        // Initialize with demo data for testing
         const demoWallet: WalletData = {
           balance: 125000,
           totalEarned: 450000,
@@ -102,13 +103,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           currency: 'NGN'
         };
         setWallet(demoWallet);
-        localStorage.setItem(walletKey, JSON.stringify(demoWallet));
+        await set(walletKey, demoWallet);
       }
 
       if (storedTransactions) {
-        setTransactions(JSON.parse(storedTransactions));
+        setTransactions(storedTransactions);
       } else {
-        // Initialize with demo transactions
         const demoTransactions: Transaction[] = [
           {
             id: '1',
@@ -151,13 +151,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           }
         ];
         setTransactions(demoTransactions);
-        localStorage.setItem(transactionsKey, JSON.stringify(demoTransactions));
+        await set(transactionsKey, demoTransactions);
       }
 
       if (storedPayouts) {
-        setPayouts(JSON.parse(storedPayouts));
+        setPayouts(storedPayouts);
       } else {
-        // Initialize with demo payouts
         const demoPayouts: Payout[] = [
           {
             id: '1',
@@ -189,7 +188,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           }
         ];
         setPayouts(demoPayouts);
-        localStorage.setItem(payoutsKey, JSON.stringify(demoPayouts));
+        await set(payoutsKey, demoPayouts);
       }
     } catch (error) {
       console.error('Error loading wallet data:', error);
@@ -203,7 +202,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
     try {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const newPayout: Payout = {
@@ -229,14 +227,42 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setPayouts(updatedPayouts);
       setWallet(updatedWallet);
 
-      // Persist to localStorage
-      localStorage.setItem(`payouts_${user.id}`, JSON.stringify(updatedPayouts));
-      localStorage.setItem(`wallet_${user.id}`, JSON.stringify(updatedWallet));
+      await set(`${STORAGE_KEYS.PAYOUTS_PREFIX}${user.id}`, updatedPayouts);
+      await set(`${STORAGE_KEYS.WALLET_PREFIX}${user.id}`, updatedWallet);
     } catch (error) {
       console.error('Payout request failed:', error);
       throw error;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+    try {
+      const newTransaction: Transaction = {
+        ...transaction,
+        id: crypto.randomUUID()
+      };
+
+      const updatedTransactions = [newTransaction, ...transactions];
+      setTransactions(updatedTransactions);
+
+      // Update wallet if this is for the current user (mentor receiving payment)
+      if (user?.id === transaction.mentorId) {
+        const updatedWallet = {
+          ...wallet,
+          balance: wallet.balance + transaction.mentorEarnings,
+          totalEarned: wallet.totalEarned + transaction.mentorEarnings
+        };
+        setWallet(updatedWallet);
+        localStorage.setItem(`wallet_${user.id}`, JSON.stringify(updatedWallet));
+      }
+
+      // Persist transaction
+      localStorage.setItem(`transactions_${transaction.mentorId}`, JSON.stringify(updatedTransactions));
+    } catch (error) {
+      console.error('Failed to create transaction:', error);
+      throw error;
     }
   };
 
@@ -252,7 +278,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      loadWalletData();
+      await loadWalletData();
     } finally {
       setLoading(false);
     }
@@ -266,6 +292,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         payouts,
         loading,
         requestPayout,
+        createTransaction,
         getTransactionHistory,
         getPayoutHistory,
         refreshWallet

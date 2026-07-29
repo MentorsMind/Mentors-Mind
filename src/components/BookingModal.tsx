@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { X, MessageSquare, Loader2, CheckCircle } from "lucide-react";
-import { useBooking } from "../contexts/BookingContext";
-import { useFocusTrap } from "../hooks/useFocusTrap";
-import { useForm } from "../hooks/useForm";
-import { bookingSchema, type BookingFormData } from "../lib/schemas";
+import { useState } from 'react';
+import { X, MessageSquare, Loader2 } from 'lucide-react';
+import { useBooking } from '../contexts/BookingContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useWallet } from '../contexts/WalletContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { showToast } from '../lib/toast';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -11,69 +12,75 @@ interface BookingModalProps {
   mentorId: string;
   mentorName: string;
   mentorImage: string;
+  mentorRate?: number; // Hourly rate in Naira
 }
 
-export function BookingModal({
-  isOpen,
-  onClose,
-  mentorId,
-  mentorName,
-  mentorImage,
-}: BookingModalProps) {
-  const { bookSession } = useBooking();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImage }: BookingModalProps) {
+  const { bookSession, isTransitionPending } = useBooking();
+  const [topic, setTopic] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const modalRef = useFocusTrap(isOpen, onClose);
 
-  const { values, getError, handleChange, handleBlur, handleSubmit } =
-    useForm<BookingFormData>(bookingSchema, { topic: "" }, async (data) => {
-      setLoading(true);
-      try {
-        const placeholderDate = new Date();
-        await bookSession(
-          mentorId,
-          mentorName,
-          mentorImage,
-          placeholderDate,
-          data.topic,
-        );
-        setSuccess(true);
-        setTimeout(() => {
-          setSuccess(false);
-          onClose();
-        }, 2000);
-      } catch (error) {
-        console.error("Booking request failed", error);
-        alert("Failed to send request. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    });
+  // Load Paystack SDK when modal opens
+  useEffect(() => {
+    if (isOpen && !paystackLoaded) {
+      loadPaystackScript()
+        .then(() => setPaystackLoaded(true))
+        .catch((err) => {
+          console.error('Failed to load Paystack:', err);
+          setError('Payment system unavailable. Please try again later.');
+        });
+    }
+  }, [isOpen, paystackLoaded]);
 
   if (!isOpen) return null;
 
-  if (success) {
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
-        aria-modal="true"
-        role="dialog"
-      >
-        <div className="bg-white dark:bg-[#1a2e22] rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl scale-100 animate-in zoom-in-95">
-          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Request Sent!
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            {mentorName} will review your request and schedule a session time.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const handleTopicSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const paystackKey = getPaystackPublicKey();
+      const amountInKobo = formatAmountInKobo(mentorRate);
+
+      const response = await initiatePayment({
+        key: paystackKey,
+        email: user.email,
+        amount: amountInKobo,
+        firstname: user.name?.split(' ')[0],
+        lastname: user.name?.split(' ')[1] || '',
+        phone: user.phone,
+        metadata: {
+          mentorId,
+          mentorName,
+          topic,
+          userId: user.id
+        },
+        onClose: () => {
+          setLoading(false);
+          setError('Payment was cancelled');
+          setStep('topic');
+        }
+      });
+
+      // Payment successful - create booking and transaction
+      const placeholderDate = new Date();
+      // bookSession now optimistically adds the session and resolves asynchronously
+      await bookSession(mentorId, mentorName, mentorImage, placeholderDate, topic);
+      // Session appears instantly in the UI with "optimistic" status
+      // On success, status resolves to "pending" (background transition)
+      // On failure, session is rolled back with a toast
+      setTopic('');
+      onClose();
+    } catch (error) {
+      // Error case (e.g. not logged in) — show toast instead of alert
+      const message = error instanceof Error ? error.message : 'Booking request failed. Please try again.';
+      showToast(message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div
@@ -112,22 +119,17 @@ export function BookingModal({
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl p-4">
-            <p className="text-sm text-blue-800 dark:text-blue-300">
-              <strong>Note:</strong> {mentorName} will review your request and
-              schedule a convenient time for both of you.
-            </p>
-          </div>
+          {/* Payment Details */}
+          <div className="p-6 space-y-6">
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl p-4">
+                <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+              </div>
+            )}
 
           <div>
-            <label
-              htmlFor="topic-input"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+            <label htmlFor="topic-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-primary" />
                 What would you like to discuss?
@@ -159,20 +161,23 @@ export function BookingModal({
               prepare for your session.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={submitting}
             className="w-full py-3.5 rounded-xl bg-primary hover:bg-green-600 text-white font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              "Send Request"
-            )}
+            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Request'}
           </button>
         </form>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
+

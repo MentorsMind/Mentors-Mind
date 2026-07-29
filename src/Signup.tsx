@@ -1,37 +1,53 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Check,
-  Sparkles,
-} from "lucide-react";
-import logo from "./assets/logo.png";
-import { PasswordStrength } from "./components/PasswordStrength";
-import { AnimatedCounter } from "./components/AnimatedCounter";
-import { Confetti } from "./components/Confetti";
-import { SocialProof } from "./components/SocialProof";
-import { useForm } from "./hooks/useForm";
-import { signupSchema, type SignupFormData } from "./lib/schemas";
+import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Check, Sparkles } from 'lucide-react';
+import logo from './assets/logo.png';
+import { PasswordStrength } from './components/PasswordStrength';
+import { AnimatedCounter } from './components/AnimatedCounter';
+import { Confetti } from './components/Confetti';
+import { SocialProof } from './components/SocialProof';
 
 export function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Capture referral code from URL (?ref=CODE)
+  const refCode = searchParams.get('ref') || '';
 
-  const { values, getError, handleChange, handleBlur, handleSubmit } =
-    useForm<SignupFormData>(
-      signupSchema,
-      { name: "", email: "", password: "" },
-      (data) => {
-        setShowConfetti(true);
-        setTimeout(() => {
-          navigate("/role-selection", { state: data });
-        }, 1500);
-      },
-    );
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    const newErrors = { name: '', email: '', password: '' };
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    else if (!validateEmail(formData.email)) newErrors.email = 'Invalid email format';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 8) newErrors.password = 'Password must be 8+ characters';
+    
+    setErrors(newErrors);
+    
+    if (!newErrors.name && !newErrors.email && !newErrors.password) {
+      setShowConfetti(true);
+      setTimeout(() => {
+        navigate('/role-selection', { state: { ...formData, refCode } });
+      }, 1500);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Clear error on change
+    setErrors({ ...errors, [name]: '' });
+  };
 
   // Generate particles
   const particles = Array.from({ length: 20 }, (_, i) => ({

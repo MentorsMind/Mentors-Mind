@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,44 +14,56 @@ import { useAuth } from "./contexts/AuthContext";
 import logo from "./assets/logo.png";
 import { AnimatedCounter } from "./components/AnimatedCounter";
 import { SocialProof } from "./components/SocialProof";
-import { useForm } from "./hooks/useForm";
-import { loginSchema, type LoginFormData } from "./lib/schemas";
 
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
-  const { values, getError, handleChange, handleBlur, handleSubmit } =
-    useForm<LoginFormData>(
-      loginSchema,
-      { email: "", password: "" },
-      async (data) => {
-        setError("");
-        setLoading(true);
-        try {
-          const success = await login(data.email, data.password);
-          if (success) {
-            const user = JSON.parse(
-              localStorage.getItem("currentUser") || "{}",
-            );
-            navigate(
-              user.role === "mentor"
-                ? "/mentor-dashboard"
-                : "/learner-dashboard",
-            );
-          } else {
-            setError("Invalid email or password");
-          }
-        } catch {
-          setError("Failed to login");
-        } finally {
-          setLoading(false);
+  // Get the intended path from location state (set by ProtectedRoute)
+  const from = (location.state as { from?: string })?.from;
+
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const success = await login(formData.email, formData.password);
+      if (success) {
+        const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
+        // If there's a stored redirect path, navigate there; otherwise go to role-appropriate dashboard
+        if (from && from !== "/login" && from !== "/signup") {
+          navigate(from, { replace: true });
+        } else {
+          navigate(
+            user.role === "mentor" ? "/mentor-dashboard" : "/learner-dashboard",
+            { replace: true },
+          );
         }
-      },
-    );
+      } else {
+        setError("Invalid email or password");
+      }
+    } catch (err) {
+      setError("Failed to login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
+  };
 
   // Generate particles
   const particles = Array.from({ length: 20 }, (_, i) => ({
@@ -227,20 +239,15 @@ export function Login() {
                 className="group animate-fade-in-up opacity-0"
                 style={{ animationDelay: "200ms" }}
               >
-                <label
-                  htmlFor="login-email"
-                  className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2"
-                >
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
                   Email Address
                 </label>
                 <div className="relative">
                   <input
-                    id="login-email"
                     type="email"
                     name="email"
                     value={values.email}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     placeholder="jane@startup.com"
                     required
                     aria-describedby="login-email-error"
@@ -266,20 +273,15 @@ export function Login() {
                 className="group animate-fade-in-up opacity-0"
                 style={{ animationDelay: "300ms" }}
               >
-                <label
-                  htmlFor="login-password"
-                  className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2"
-                >
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    id="login-password"
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={values.password}
                     onChange={handleChange}
-                    onBlur={handleBlur}
                     placeholder="••••••••"
                     required
                     aria-describedby="login-password-error"

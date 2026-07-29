@@ -5,7 +5,8 @@ import {
   GraduationCap,
   Calendar,
   Clock,
-  BookOpen
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { AppLayout } from './components/AppLayout';
@@ -15,8 +16,6 @@ import { GoalTracker } from './components/GoalTracker';
 export function LearnerProfile() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  // In a real app we'd fetch partial user data by ID, but for now we rely on AuthContext if it's "my" profile.
-  // Or we find them in 'users' array in localStorage.
   const { user: authUser } = useAuth();
   
   // Try to find the user in local storage if not current auth user
@@ -25,6 +24,11 @@ export function LearnerProfile() {
 
   const { getSessionsForUser } = useBooking();
   const sessions = profileUser ? getSessionsForUser(profileUser.id) : [];
+
+  // Calculate referral count
+  const referralCount = profileUser
+    ? users.filter((u) => u.referredBy === profileUser.id).length
+    : 0;
 
   if (!profileUser) {
     return (
@@ -103,6 +107,15 @@ export function LearnerProfile() {
                             </span>
                         </div>
                         <p className="text-sm text-gray-500">Learning Hours</p>
+                     </div>
+                     <div className="bg-white dark:bg-white/5 p-6 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg">
+                                <Users className="w-5 h-5" />
+                            </div>
+                            <span className="text-3xl font-bold text-gray-900 dark:text-white">{referralCount}</span>
+                        </div>
+                        <p className="text-sm text-gray-500">Referrals Made</p>
                      </div>
                 </div>
 
