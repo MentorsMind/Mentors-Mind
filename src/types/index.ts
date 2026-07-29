@@ -1,6 +1,6 @@
 export type { Mentor, MedicalProfessional, Review, Experience, Post as DataPost, ConsultationBooking } from '../data';
 export type { User, LearningGoal, NotificationPreferences } from '../contexts/AuthContext';
-export type { Session, SessionResource } from '../contexts/BookingContext';
+export type { Session as BookingSession, SessionResource } from '../contexts/BookingContext';
 export type { Post as ForumPost, Comment } from '../contexts/ForumContext';
 export type { Notification as AppNotification } from '../contexts/NotificationContext';
 export type { Message, Thread } from '../contexts/MessageContext';

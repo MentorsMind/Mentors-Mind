@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
-
+import { createContext, useContext, useState, useEffect, useTransition, useCallback } from 'react';
+import { useAuth, type ReferralReward } from './AuthContext';
 import { useNotifications } from './NotificationContext';
+import { showToast } from '../lib/toast';
+import { get, getSync, set, setSync } from '../lib/storage';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 export interface SessionResource {
   id: string;
@@ -22,46 +24,53 @@ export interface Session {
   learnerImage: string;
   date: string; // ISO String
   topic: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'optimistic' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
   resources?: SessionResource[];
+  amount?: number; // Amount paid in Naira
+  paystackReference?: string; // Paystack transaction reference
 }
 
 interface BookingContextType {
   sessions: Session[];
-  bookSession: (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string) => Promise<void>;
+  bookSession: (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string, amount?: number, paystackReference?: string) => Promise<void>;
   updateSessionStatus: (sessionId: string, status: Session['status']) => void;
   getSessionsForUser: (userId: string) => Session[];
   addSessionResource: (sessionId: string, resource: Omit<SessionResource, 'id' | 'addedBy' | 'addedAt'>) => void;
   removeSessionResource: (sessionId: string, resourceId: string) => void;
+  rollbackBooking: (sessionId: string) => void;
   loading: boolean;
+  isTransitionPending: boolean;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [isTransitionPending, startTransition] = useTransition();
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
 
-  // Load sessions from localStorage on mount
   useEffect(() => {
-    const storedSessions = localStorage.getItem('sessions');
-    if (storedSessions) {
-      setSessions(JSON.parse(storedSessions));
-    }
-    setLoading(false);
+    const loadSessions = async () => {
+      const storedSessions = await get<Session[]>(STORAGE_KEYS.SESSIONS);
+      if (storedSessions) {
+        setSessions(storedSessions);
+      }
+      setLoading(false);
+    };
+
+    void loadSessions();
   }, []);
 
-  // Save sessions to localStorage whenever they change
   useEffect(() => {
     if (!loading) {
-      localStorage.setItem('sessions', JSON.stringify(sessions));
+      void set(STORAGE_KEYS.SESSIONS, sessions);
     }
   }, [sessions, loading]);
 
-  const bookSession = async (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string) => {
+  const bookSession = async (mentorId: string, mentorName: string, mentorImage: string, date: Date, topic: string, amount?: number, paystackReference?: string) => {
     if (!user) throw new Error("Must be logged in to book a session");
 
     const newSession: Session = {
@@ -70,45 +79,117 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       learnerId: user.id,
       mentorName,
       learnerName: user.name,
-      mentorImage: mentorImage,
+      mentorImage,
       learnerImage: user.image || "https://api.dicebear.com/7.x/avataaars/svg?seed=Guest",
       date: date.toISOString(),
       topic,
-      status: 'pending'
+      status: 'optimistic',
     };
 
+    const snapshot = sessions;
+
     setSessions(prev => [newSession, ...prev]);
-    
-    // Notify Mentor
+
     addNotification(
-      mentorId, 
-      'booking', 
-      'New Session Request', 
+      mentorId,
+      'booking',
+      'New Session Request',
       `${user.name} requested a session on ${topic}`,
-      `/mentor-dashboard`
+      `/mentor-dashboard`,
     );
 
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
+
+    const failureRate = Number(import.meta.env.VITE_BOOKING_FAILURE_RATE) || 0.1;
+    const shouldFail = Math.random() < failureRate;
+
+    if (shouldFail) {
+      startTransition(() => {
+        setSessions(snapshot);
+      });
+      showToast('Booking failed. Please try again.', 'error');
+      return;
+    }
+
+    startTransition(() => {
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === newSession.id ? { ...s, status: 'pending' } : s,
+        ),
+      );
+    });
   };
+
+  const rollbackBooking = useCallback((sessionId: string) => {
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+    showToast('Session booking has been rolled back.', 'info');
+  }, []);
 
   const updateSessionStatus = (sessionId: string, status: Session['status']) => {
     const sessionToUpdate = sessions.find(s => s.id === sessionId);
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status } : s));
 
     if (sessionToUpdate && user) {
-        // Notify the OTHER party
-        const recipientId = user.id === sessionToUpdate.mentorId ? sessionToUpdate.learnerId : sessionToUpdate.mentorId;
-        const senderName = user.name;
-        const dashboardLink = user.id === sessionToUpdate.mentorId ? `/learner-dashboard` : `/mentor-dashboard`;
+      const recipientId = user.id === sessionToUpdate.mentorId ? sessionToUpdate.learnerId : sessionToUpdate.mentorId;
+      const senderName = user.name;
+      const dashboardLink = user.id === sessionToUpdate.mentorId ? `/learner-dashboard` : `/mentor-dashboard`;
 
-        addNotification(
-            recipientId,
-            'booking',
-            `Session ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-            `Your session with ${senderName} has been ${status}.`,
-            dashboardLink
-        );
+      addNotification(
+        recipientId,
+        'booking',
+        `Session ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        `Your session with ${senderName} has been ${status}.`,
+        dashboardLink
+      );
+
+      if (status === 'completed' && sessionToUpdate.learnerId) {
+        const allUsers = getSync<(Record<string, unknown> & {
+          id: string;
+          referredBy?: string;
+          referralRewards?: ReferralReward[];
+        })[]>(STORAGE_KEYS.USERS) ?? [];
+
+        const learner = allUsers.find((u) => u.id === sessionToUpdate.learnerId);
+        const learnerSessions = sessions.filter((s) => s.learnerId === sessionToUpdate.learnerId);
+        const completedSessions = learnerSessions.filter((s) => s.status === 'completed');
+        const isFirstSession = completedSessions.length === 1;
+
+        if (isFirstSession && learner?.referredBy) {
+          const referrerId = learner.referredBy;
+          const referrerIndex = allUsers.findIndex((u) => u.id === referrerId);
+
+          if (referrerIndex !== -1) {
+            const existingRewards: ReferralReward[] =
+              allUsers[referrerIndex].referralRewards ?? [];
+
+            if (!existingRewards.some((r) => r.sessionId === sessionId)) {
+              const newReward: ReferralReward = {
+                userId: referrerId,
+                sessionId,
+                rewardedAt: new Date().toISOString(),
+              };
+
+              const updatedRewards = [...existingRewards, newReward];
+              allUsers[referrerIndex] = {
+                ...allUsers[referrerIndex],
+                referralRewards: updatedRewards,
+              };
+              setSync(STORAGE_KEYS.USERS, allUsers);
+
+              if (user.id === referrerId) {
+                const currentUser = getSync<Record<string, unknown> & {
+                  id: string;
+                  referralRewards?: ReferralReward[];
+                }>(STORAGE_KEYS.CURRENT_USER);
+                if (currentUser?.id === referrerId) {
+                  currentUser.referralRewards = updatedRewards;
+                  setSync(STORAGE_KEYS.CURRENT_USER, currentUser);
+                }
+              }
+            }
+          }
+        }
+      }
     }
   };
 
@@ -140,13 +221,13 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     }));
 
     if (sessionToUpdate && user.id === sessionToUpdate.mentorId) {
-       addNotification(
-          sessionToUpdate.learnerId,
-          'system',
-          'New Session Resource',
-          `${user.name} added a new ${resource.type} to your session.`,
-          '/learner/dashboard' // Learner dashboard
-       );
+      addNotification(
+        sessionToUpdate.learnerId,
+        'system',
+        'New Session Resource',
+        `${user.name} added a new ${resource.type} to your session.`,
+        '/learner/dashboard'
+      );
     }
   };
 
@@ -163,7 +244,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <BookingContext.Provider value={{ sessions, bookSession, updateSessionStatus, getSessionsForUser, addSessionResource, removeSessionResource, loading }}>
+    <BookingContext.Provider value={{ sessions, bookSession, updateSessionStatus, getSessionsForUser, addSessionResource, removeSessionResource, rollbackBooking, loading, isTransitionPending }}>
       {children}
     </BookingContext.Provider>
   );
