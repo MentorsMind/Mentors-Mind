@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "vitest run"
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -41,6 +42,7 @@
     "storybook": "^8.6.14",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^4.1.10"
   }
 }
