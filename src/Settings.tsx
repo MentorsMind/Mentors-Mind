@@ -598,12 +598,6 @@ export function Settings() {
                 <div className="p-6 md:p-8">
                   <ReferralSection />
                 </div>
-              )}="text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Note:</strong> Theme preferences are saved to your browser. You can also use your system's theme preference.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               )}
 
               {/* Danger Zone Section */}
