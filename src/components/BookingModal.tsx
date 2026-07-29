@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, MessageSquare, Loader2 } from 'lucide-react';
+import { X, MessageSquare } from 'lucide-react';
 import { useBooking } from '../contexts/BookingContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { showToast } from '../lib/toast';
@@ -13,9 +13,8 @@ interface BookingModalProps {
 }
 
 export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImage }: BookingModalProps) {
-  const { bookSession, isTransitionPending } = useBooking();
+  const { bookSession } = useBooking();
   const [topic, setTopic] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   const modalRef = useFocusTrap(isOpen, onClose);
 
@@ -23,24 +22,23 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+
+    // Capture topic & close modal immediately — session appears in UI via optimistic update
+    const topicValue = topic;
+    setTopic('');
+    onClose();
 
     try {
-      // Use a placeholder date - mentor will schedule the actual time
       const placeholderDate = new Date();
-      // bookSession now optimistically adds the session and resolves asynchronously
-      await bookSession(mentorId, mentorName, mentorImage, placeholderDate, topic);
-      // Session appears instantly in the UI with "optimistic" status
-      // On success, status resolves to "pending" (background transition)
-      // On failure, session is rolled back with a toast
-      setTopic('');
-      onClose();
+      // bookSession does NOT need to be awaited for the UI to update
+      // The session appears instantly in the UI via the optimistic update
+      await bookSession(mentorId, mentorName, mentorImage, placeholderDate, topicValue);
+      // On success, the session status resolves from 'optimistic' to 'pending'
+      // On failure, the session is rolled back and an error toast is shown
     } catch (error) {
       // Error case (e.g. not logged in) — show toast instead of alert
       const message = error instanceof Error ? error.message : 'Booking request failed. Please try again.';
       showToast(message, 'error');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -97,10 +95,9 @@ export function BookingModal({ isOpen, onClose, mentorId, mentorName, mentorImag
 
           <button
             type="submit"
-            disabled={submitting}
-            className="w-full py-3.5 rounded-xl bg-primary hover:bg-green-600 text-white font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-xl bg-primary hover:bg-green-600 text-white font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Request'}
+            Send Request
           </button>
         </form>
       </div>

@@ -36,7 +36,7 @@ interface BookingContextType {
   getSessionsForUser: (userId: string) => Session[];
   addSessionResource: (sessionId: string, resource: Omit<SessionResource, 'id' | 'addedBy' | 'addedAt'>) => void;
   removeSessionResource: (sessionId: string, resourceId: string) => void;
-  rollbackBooking: (sessionId: string) => void;
+  rollbackBooking: (sessionId: string, snapshot: Session[]) => void;
   loading: boolean;
   isTransitionPending: boolean;
 }
@@ -84,9 +84,11 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       status: 'optimistic',
     };
 
-    const snapshot = sessions;
+    const snapshot: Session[] = [...sessions];
 
-    setSessions(prev => [newSession, ...prev]);
+    startTransition(() => {
+      setSessions(prev => [newSession, ...prev]);
+    });
 
     addNotification(
       mentorId,
@@ -118,8 +120,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const rollbackBooking = useCallback((sessionId: string) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
+  const rollbackBooking = useCallback((sessionId: string, snapshot: Session[]) => {
+    startTransition(() => {
+      setSessions(snapshot);
+    });
     showToast('Session booking has been rolled back.', 'info');
   }, []);
 
