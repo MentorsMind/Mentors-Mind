@@ -35,6 +35,7 @@ interface ForumContextType {
   createPost: (title: string, content: string, category: string) => void;
   addComment: (postId: string, content: string) => void;
   likePost: (postId: string) => boolean;
+  deletePost: (postId: string) => void;
   loading: boolean;
 }
 
@@ -193,6 +194,10 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const deletePost = (postId: string) => {
+    setPosts(prev => prev.filter(post => post.id !== postId));
+  };
+
   const searchPosts = (query: string) => {
     if (!query) return posts;
     const lowerQuery = query.toLowerCase();
@@ -204,7 +209,7 @@ export function ForumProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ForumContext.Provider value={{ posts, searchPosts, createPost, addComment, likePost, loading }}>
+    <ForumContext.Provider value={{ posts, searchPosts, createPost, addComment, likePost, deletePost, loading }}>
       {children}
     </ForumContext.Provider>
   );
