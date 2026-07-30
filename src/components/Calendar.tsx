@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, AlertCircle } from 'lucide-react';
 import type { Session } from '../contexts/BookingContext';
+import type { AvailabilitySlot } from '../contexts/AuthContext';
 
 // 30-minute slots from 08:00 to 20:00
 const TIME_SLOTS: string[] = (() => {
@@ -19,6 +20,12 @@ interface CalendarProps {
   onSelect: (date: Date) => void;
   /** Currently selected date (controlled) */
   selectedDate: Date | null;
+  /** Optional: mentor's availability slots for filtering */
+  mentorAvailability?: AvailabilitySlot[];
+  /** Optional: mentor's timezone for display */
+  mentorTimezone?: string;
+  /** Optional: learner's timezone for conversion */
+  learnerTimezone?: string;
 }
 
 /**
@@ -71,7 +78,33 @@ function buildBlockedSlots(
   return blocked;
 }
 
-export function Calendar({ bookedSessions, onSelect, selectedDate }: CalendarProps) {
+/**
+ * Check if a time slot is within mentor's available hours for a given day
+ */
+function isSlotAvailable(
+  slot: string,
+  dayOfWeek: number,
+  availability?: AvailabilitySlot[],
+): boolean {
+  if (!availability || availability.length === 0) return true;
+
+  const daySlots = availability.filter((a) => a.dayOfWeek === dayOfWeek);
+  if (daySlots.length === 0) return false;
+
+  const [h, m] = slot.split(':').map(Number);
+  const hour = h + m / 60;
+
+  return daySlots.some((slot) => hour >= slot.startHour && hour < slot.endHour);
+}
+
+export function Calendar({ 
+  bookedSessions, 
+  onSelect, 
+  selectedDate,
+  mentorAvailability,
+  mentorTimezone,
+  learnerTimezone,
+}: CalendarProps) {
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -82,6 +115,9 @@ export function Calendar({ bookedSessions, onSelect, selectedDate }: CalendarPro
   const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-indexed
   const [pickedDay, setPickedDay] = useState<Date | null>(null);
   const [pickedTime, setPickedTime] = useState<string | null>(null);
+
+  // Check if mentor has no availability set
+  const mentorHasNoAvailability = mentorAvailability && mentorAvailability.length === 0;
 
   // ── Calendar grid helpers ────────────────────────────────────────────────
 
@@ -163,8 +199,22 @@ export function Calendar({ bookedSessions, onSelect, selectedDate }: CalendarPro
 
   const blockedSlots = useMemo(() => {
     if (!pickedDay) return new Set<string>();
-    return buildBlockedSlots(bookedSessions, toDateKey(pickedDay));
-  }, [bookedSessions, pickedDay]);
+    const booked = buildBlockedSlots(bookedSessions, toDateKey(pickedDay));
+    
+    // Also block slots outside mentor's availability
+    if (mentorAvailability && mentorAvailability.length > 0) {
+      const unavailableSlots = new Set<string>();
+      for (const slot of TIME_SLOTS) {
+        if (!isSlotAvailable(slot, pickedDay.getDay(), mentorAvailability)) {
+          unavailableSlots.add(slot);
+        }
+      }
+      // Merge booked and unavailable slots
+      return new Set([...booked, ...unavailableSlots]);
+    }
+    
+    return booked;
+  }, [bookedSessions, pickedDay, mentorAvailability]);
 
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
   const selectedTimeSlot = selectedDate
@@ -172,6 +222,20 @@ export function Calendar({ bookedSessions, onSelect, selectedDate }: CalendarPro
     : null;
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  if (mentorHasNoAvailability) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30">
+        <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+        <div className="text-center">
+          <h3 className="font-semibold text-amber-900 dark:text-amber-200">Mentor availability not set</h3>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+            This mentor hasn't set their availability yet. Please contact them to schedule a session.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5" role="group" aria-label="Session date and time picker">
@@ -337,7 +401,7 @@ export function Calendar({ bookedSessions, onSelect, selectedDate }: CalendarPro
           {blockedSlots.size > 0 && (
             <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
               <span className="inline-block w-2 h-2 rounded bg-gray-300 dark:bg-gray-600" />
-              Strikethrough slots are already booked
+              Strikethrough slots are already booked or unavailable
             </p>
           )}
         </div>

@@ -24,6 +24,7 @@ import { PatientConsultations } from "./PatientConsultations";
 import { MedicalProfile } from "./MedicalProfile";
 import { DoctorsDirectory } from "./DoctorsDirectory";
 import { SessionHistory } from "./SessionHistory";
+import { GlobalSearch } from "./GlobalSearch";
 
 import { LandingPage } from "./LandingPage";
 import { ToastContainer } from "./components/ToastContainer";

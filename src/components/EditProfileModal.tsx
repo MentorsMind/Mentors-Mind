@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
 import { X, Camera, Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { ImageUploader } from './ImageUploader';
+import { AvailabilityEditor } from './AvailabilityEditor';
+import type { AvailabilitySlot } from '../contexts/AuthContext';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'details' | 'expertise';
+  initialTab?: 'details' | 'expertise' | 'availability';
 }
 
 export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: EditProfileModalProps) {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'expertise'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'details' | 'expertise' | 'availability'>(initialTab);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -123,12 +126,20 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                 Basic Details
             </button>
             {user?.role === 'mentor' && (
-              <button 
-                   onClick={() => setActiveTab('expertise')}
-                   className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'expertise' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'}`}
-              >
-                  Expertise & Pricing
-              </button>
+              <>
+                <button 
+                     onClick={() => setActiveTab('expertise')}
+                     className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'expertise' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'}`}
+                >
+                    Expertise & Pricing
+                </button>
+                <button 
+                     onClick={() => setActiveTab('availability')}
+                     className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'availability' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white'}`}
+                >
+                    Availability
+                </button>
+              </>
             )}
         </div>
 
@@ -247,7 +258,7 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                         </div>
                     </div>
                 </>
-            ) : (
+            ) : activeTab === 'expertise' ? (
                 <>
                     <div className="space-y-4">
                         <div className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
@@ -319,7 +330,18 @@ export function EditProfileModal({ isOpen, onClose, initialTab = 'details' }: Ed
                         </div>
                     </div>
                 </>
-            )}
+            ) : activeTab === 'availability' ? (
+                <AvailabilityEditor 
+                  availability={user?.availability}
+                  timezone={user?.timezone}
+                  onSave={(availability, timezone) => {
+                    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+                    updateUser({ availability, timezone }).then(() => {
+                      // Show success message
+                    });
+                  }}
+                />
+            ) : null}
             
           </form>
         </div>
